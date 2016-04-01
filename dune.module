@@ -10,4 +10,4 @@ Label: 2016.04-pre
 Maintainer: joaho@statoil.com
 MaintainerName: Joakim Hove
 Url: http://opm-project.org
-Depends: opm-common opm-parser
+Depends: opm-common opm-parser opm-core
