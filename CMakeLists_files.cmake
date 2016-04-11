@@ -14,6 +14,7 @@ list( APPEND MAIN_SOURCE_FILES
 
 list (APPEND PUBLIC_HEADER_FILES
         opm/output/OutputWriter.hpp
+        opm/output/Wells.hpp
         opm/output/eclipse/CornerpointChopper.hpp
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
@@ -31,6 +32,7 @@ list (APPEND TEST_SOURCE_FILES
         tests/test_EclipseWriteRFTHandler.cpp
         tests/test_writenumwells.cpp
         tests/test_writeReadRestartFile.cpp
+        tests/test_Wells.cpp
 )
 
 # originally generated with the command:
