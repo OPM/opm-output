@@ -7,6 +7,7 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseReader.cpp
         opm/output/eclipse/EclipseWriteRFTHandler.cpp
         opm/output/eclipse/EclipseWriter.cpp
+        opm/output/eclipse/Summary.cpp
         opm/output/eclipse/writeECLData.cpp
         opm/output/vag/vag.cpp
         opm/output/vtk/writeVtkData.cpp
@@ -22,6 +23,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseUnits.hpp
         opm/output/eclipse/EclipseWriteRFTHandler.hpp
         opm/output/eclipse/EclipseWriter.hpp
+        opm/output/eclipse/Summary.hpp
         opm/output/eclipse/writeECLData.hpp
         opm/output/vag/vag.hpp
         opm/output/vtk/writeVtkData.hpp
@@ -33,10 +35,12 @@ list (APPEND TEST_SOURCE_FILES
         tests/test_writenumwells.cpp
         tests/test_writeReadRestartFile.cpp
         tests/test_Wells.cpp
+        tests/test_Summary.cpp
 )
 
 # originally generated with the command:
 # find tests -name '*.xml' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_DATA_FILES
         tests/testBlackoilState3.DATA
+        tests/summary_deck.DATA
 )
