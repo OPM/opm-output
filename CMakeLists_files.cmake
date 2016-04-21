@@ -43,4 +43,6 @@ list (APPEND TEST_SOURCE_FILES
 list (APPEND TEST_DATA_FILES
         tests/testBlackoilState3.DATA
         tests/summary_deck.DATA
+        tests/FIRST_SIM.DATA
+        tests/testRFT.DATA
 )
