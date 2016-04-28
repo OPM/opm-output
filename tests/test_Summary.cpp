@@ -95,11 +95,6 @@ ERT::ert_unique_ptr< ecl_sum_type, ecl_sum_free > readsum( const std::string& ba
            );
 }
 
-void rmfiles( const std::string& basename ) {
-    std::remove( ( basename + ".UNSMRY" ).c_str() );
-    std::remove( ( basename + ".SMSPEC" ).c_str() );
-}
-
 struct setup {
     std::shared_ptr< Deck > deck;
     EclipseState es;
@@ -114,6 +109,11 @@ struct setup {
         wells( result_wells() ),
         name( fname )
     {}
+
+    ~setup() {
+        std::remove( ( name + ".UNSMRY" ).c_str() );
+        std::remove( ( name + ".SMSPEC" ).c_str() );
+    }
 };
 
 /*
@@ -140,7 +140,6 @@ BOOST_AUTO_TEST_CASE(W_WOG_PR) {
     BOOST_CHECK_CLOSE( 10.2, ecl_sum_get_well_var( resp, 0, "W_1", "WGPR" ), 1e-5 );
     BOOST_CHECK_CLOSE( 20.2, ecl_sum_get_well_var( resp, 0, "W_2", "WGPR" ), 1e-5 );
     BOOST_CHECK_CLOSE( 30.2, ecl_sum_get_well_var( resp, 0, "W_3", "WGPR" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(W_WOG_PT) {
@@ -176,7 +175,6 @@ BOOST_AUTO_TEST_CASE(W_WOG_PT) {
     BOOST_CHECK_CLOSE( 2 * 10.2 / day, ecl_sum_get_well_var( resp, 1, "W_1", "WGPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 20.2 / day, ecl_sum_get_well_var( resp, 1, "W_2", "WGPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 30.2 / day, ecl_sum_get_well_var( resp, 1, "W_3", "WGPT" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(WWCT) {
@@ -196,7 +194,6 @@ BOOST_AUTO_TEST_CASE(WWCT) {
     BOOST_CHECK_CLOSE( wcut1, ecl_sum_get_well_var( resp, 0, "W_1", "WWCT" ), 1e-5 );
     BOOST_CHECK_CLOSE( wcut2, ecl_sum_get_well_var( resp, 0, "W_2", "WWCT" ), 1e-5 );
     BOOST_CHECK_CLOSE( wcut3, ecl_sum_get_well_var( resp, 0, "W_3", "WWCT" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(WGOR) {
@@ -216,7 +213,6 @@ BOOST_AUTO_TEST_CASE(WGOR) {
     BOOST_CHECK_CLOSE( wgor1, ecl_sum_get_well_var( resp, 0, "W_1", "WGOR" ), 1e-5 );
     BOOST_CHECK_CLOSE( wgor2, ecl_sum_get_well_var( resp, 0, "W_2", "WGOR" ), 1e-5 );
     BOOST_CHECK_CLOSE( wgor3, ecl_sum_get_well_var( resp, 0, "W_3", "WGOR" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(WBHP) {
@@ -232,7 +228,6 @@ BOOST_AUTO_TEST_CASE(WBHP) {
     BOOST_CHECK_CLOSE( 0.1, ecl_sum_get_well_var( resp, 0, "W_1", "WBHP" ), 1e-5 );
     BOOST_CHECK_CLOSE( 1.1, ecl_sum_get_well_var( resp, 0, "W_2", "WBHP" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2.1, ecl_sum_get_well_var( resp, 0, "W_3", "WBHP" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(WTHP) {
@@ -248,7 +243,6 @@ BOOST_AUTO_TEST_CASE(WTHP) {
     BOOST_CHECK_CLOSE( 0.2, ecl_sum_get_well_var( resp, 0, "W_1", "WTHP" ), 1e-5 );
     BOOST_CHECK_CLOSE( 1.2, ecl_sum_get_well_var( resp, 0, "W_2", "WTHP" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2.2, ecl_sum_get_well_var( resp, 0, "W_3", "WTHP" ), 1e-5 );
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(WLP_R_T) {
@@ -276,8 +270,6 @@ BOOST_AUTO_TEST_CASE(WLP_R_T) {
     BOOST_CHECK_CLOSE( (30.0 + 30.1) / day, ecl_sum_get_well_var( resp, 0, "W_3", "WLPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( (30.0 + 30.1), ecl_sum_get_well_var( resp, 1, "W_3", "WLPR" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * (30.0 + 30.1) / day, ecl_sum_get_well_var( resp, 1, "W_3", "WLPT" ), 1e-5 );
-
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(W_WOG_PRH) {
@@ -298,8 +290,6 @@ BOOST_AUTO_TEST_CASE(W_WOG_PRH) {
 
     BOOST_CHECK_CLOSE( 10.2, ecl_sum_get_well_var( resp, 0, "W_1", "WGPRH" ), 1e-5 );
     BOOST_CHECK_CLOSE( 20.2, ecl_sum_get_well_var( resp, 0, "W_2", "WGPRH" ), 1e-5 );
-
-    rmfiles( cfg.name );
 }
 
 BOOST_AUTO_TEST_CASE(W_WOG_PTH) {
@@ -319,8 +309,87 @@ BOOST_AUTO_TEST_CASE(W_WOG_PTH) {
     BOOST_CHECK_CLOSE( 2 * 20.1 / day, ecl_sum_get_well_var( resp, 1, "W_2", "WOPTH" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 10.2 / day, ecl_sum_get_well_var( resp, 1, "W_1", "WGPTH" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 20.2 / day, ecl_sum_get_well_var( resp, 1, "W_2", "WGPTH" ), 1e-5 );
+}
 
-    rmfiles( cfg.name );
+BOOST_AUTO_TEST_CASE(G_WOG_PR) {
+    setup cfg( "sum_test_G_WOG_PR" );
+
+    out::Summary writer( cfg.es, cfg.config, cfg.name );
+    writer.add_timestep( 1, 1, cfg.es, cfg.wells );
+    writer.add_timestep( 1, 1, cfg.es, cfg.wells );
+    writer.write();
+
+    auto res = readsum( cfg.name );
+    const auto* resp = res.get();
+
+    BOOST_CHECK_CLOSE( 10.0 + 20.0, ecl_sum_get_group_var( resp, 0, "G_1", "GWPR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.0, ecl_sum_get_group_var( resp, 0, "G_2", "GWPR" ), 1e-5 );
+
+    BOOST_CHECK_CLOSE( 10.1 + 20.1, ecl_sum_get_group_var( resp, 0, "G_1", "GOPR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.1, ecl_sum_get_group_var( resp, 0, "G_2", "GOPR" ), 1e-5 );
+
+    BOOST_CHECK_CLOSE( 10.2 + 20.2, ecl_sum_get_group_var( resp, 0, "G_1", "GGPR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.2, ecl_sum_get_group_var( resp, 0, "G_2", "GGPR" ), 1e-5 );
+}
+
+BOOST_AUTO_TEST_CASE(G_WOG_PT) {
+    setup cfg( "sum_test_G_WOG_PT" );
+
+    out::Summary writer( cfg.es, cfg.config, cfg.name );
+    writer.add_timestep( 1, 1, cfg.es, cfg.wells );
+    writer.add_timestep( 2, 1, cfg.es, cfg.wells );
+    writer.write();
+
+    auto res = readsum( cfg.name );
+    const auto* resp = res.get();
+
+    BOOST_CHECK_CLOSE( (10.0 + 20.0) / day, ecl_sum_get_group_var( resp, 0, "G_1", "GWPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.0 / day, ecl_sum_get_group_var( resp, 0, "G_2", "GWPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( (10.1 + 20.1) / day, ecl_sum_get_group_var( resp, 0, "G_1", "GOPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.1 / day, ecl_sum_get_group_var( resp, 0, "G_2", "GOPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( (10.2 + 20.2) / day, ecl_sum_get_group_var( resp, 0, "G_1", "GGPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.2 / day, ecl_sum_get_group_var( resp, 0, "G_2", "GGPT" ), 1e-5 );
+
+    BOOST_CHECK_CLOSE( 2 * (10.0 + 20.0) / day, ecl_sum_get_group_var( resp, 1, "G_1", "GWPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * 30.0 / day, ecl_sum_get_group_var( resp, 1, "G_2", "GWPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (10.1 + 20.1) / day, ecl_sum_get_group_var( resp, 1, "G_1", "GOPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * 30.1 / day, ecl_sum_get_group_var( resp, 1, "G_2", "GOPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (10.2 + 20.2) / day, ecl_sum_get_group_var( resp, 1, "G_1", "GGPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * 30.2 / day, ecl_sum_get_group_var( resp, 1, "G_2", "GGPT" ), 1e-5 );
+}
+
+BOOST_AUTO_TEST_CASE(GWCT) {
+    setup cfg( "sum_test_GWCT" );
+
+    out::Summary writer( cfg.es, cfg.config, cfg.name );
+    writer.add_timestep( 1, 1, cfg.es, cfg.wells );
+    writer.write();
+
+    auto res = readsum( cfg.name );
+    const auto* resp = res.get();
+
+    const double wcut1 = (10.0 + 20.0) / ( 10.0 + 10.1 + 20.0 + 20.1 );
+    const double wcut2 = 30.0 / ( 30.0 + 30.1 );
+
+    BOOST_CHECK_CLOSE( wcut1, ecl_sum_get_group_var( resp, 0, "G_1", "GWCT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( wcut2, ecl_sum_get_group_var( resp, 0, "G_2", "GWCT" ), 1e-5 );
+}
+
+BOOST_AUTO_TEST_CASE(GGOR) {
+    setup cfg( "sum_test_GGOR" );
+
+    out::Summary writer( cfg.es, cfg.config, cfg.name );
+    writer.add_timestep( 1, 1, cfg.es, cfg.wells );
+    writer.write();
+
+    auto res = readsum( cfg.name );
+    const auto* resp = res.get();
+
+    const double ggor1 = (10.2 + 20.2) / (10.1 + 20.1);
+    const double ggor2 = 30.2 / 30.1;
+
+    BOOST_CHECK_CLOSE( ggor1, ecl_sum_get_group_var( resp, 0, "G_1", "GGOR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( ggor2, ecl_sum_get_group_var( resp, 0, "G_2", "GGOR" ), 1e-5 );
 }
 
 BOOST_AUTO_TEST_CASE(Time) {
@@ -343,16 +412,4 @@ BOOST_AUTO_TEST_CASE(Time) {
     BOOST_CHECK_EQUAL( ecl_sum_iget_sim_days( resp, 1 ), 10 );
     BOOST_CHECK_EQUAL( ecl_sum_iget_sim_days( resp, 2 ), 20 );
     BOOST_CHECK_EQUAL( ecl_sum_get_sim_length( resp ), 20 );
-}
-
-BOOST_AUTO_TEST_CASE(WRITE) {
-    const auto deck = Parser().parseFile( path, ParseContext() );
-    EclipseState es( deck, ParseContext() );
-    SummaryConfig config( *deck, es );
-    const auto wells = result_wells();
-
-    out::Summary writer( es, config );
-    writer.add_timestep( 1, 1, es, wells );
-    writer.add_timestep( 1, 1, es, wells );
-    writer.write();
 }

@@ -22,7 +22,9 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WellSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellProductionProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/Units/ConversionFactors.hpp>
@@ -127,7 +129,7 @@ inline std::time_t to_time_t( boost::posix_time::ptime pt ) {
 }
 
 /* The supported Eclipse keywords */
-enum class E {
+enum class E : out::Summary::kwtype {
     WBHP,
     WBHPH,
     WGIR,
@@ -164,6 +166,18 @@ enum class E {
     WWPRH,
     WWPT,
     WWPTH,
+    GWPT,
+    GOPT,
+    GGPT,
+    GWPR,
+    GOPR,
+    GLPR,
+    GGPR,
+    GWIR,
+    GGIR,
+    GGIT,
+    GWCT,
+    GGOR,
     UNSUPPORTED,
 };
 
@@ -204,6 +218,18 @@ const std::map< std::string, E > keyhash = {
     { "WWPRH", E::WWPRH },
     { "WWPT",  E::WWPT },
     { "WWPTH", E::WWPTH },
+    { "GWPT",  E::GWPT },
+    { "GOPT",  E::GOPT },
+    { "GGPT",  E::GGPT },
+    { "GWPR",  E::GWPR },
+    { "GOPR",  E::GOPR },
+    { "GLPR",  E::GLPR },
+    { "GGPR",  E::GGPR },
+    { "GWIR",  E::GWIR },
+    { "GGIR",  E::GGIR },
+    { "GGIT",  E::GGIT },
+    { "GWCT",  E::GWCT },
+    { "GGOR",  E::GGOR },
 };
 
 inline const E khash( const char* key ) {
@@ -216,7 +242,7 @@ inline const E khash( const char* key ) {
     return itr->second;
 }
 
-inline double wwct( double wat, double oil ) {
+inline double wct( double wat, double oil ) {
     /* handle div-by-zero - if this well is shut, all production rates will be
      * zero and there is no cut (i.e. zero). */
     if( oil == 0 ) return 0;
@@ -229,10 +255,10 @@ inline double wwcth( const Well& w, size_t ts ) {
     if( w.isInjector( ts ) ) return 0;
 
     const auto& p = w.getProductionProperties( ts );
-    return wwct( p.WaterRate, p.OilRate );
+    return wct( p.WaterRate, p.OilRate );
 }
 
-inline double wgor( double gas, double oil ) {
+inline double gor( double gas, double oil ) {
     /* handle div-by-zero - if this well is shut, all production rates will be
      * zero and there is no gas/oil ratio, (i.e. zero). 
      *
@@ -253,7 +279,7 @@ inline double wgorh( const Well& w, size_t ts ) {
 
     const auto& p = w.getProductionProperties( ts );
 
-    return wgor( p.GasRate, p.OilRate );
+    return gor( p.GasRate, p.OilRate );
 }
 
 enum class WT { wat, oil, gas };
@@ -330,7 +356,8 @@ inline double get_vol( const data::Well& w,
     }
 }
 
-inline double well_keywords( const smspec_node_type* node,
+inline double well_keywords( E keyword,
+                             const smspec_node_type* node,
                              const ecl_sum_tstep_type* prev,
                              const double* conversion_table,
                              const data::Well& sim_well,
@@ -340,44 +367,65 @@ inline double well_keywords( const smspec_node_type* node,
     const auto* genkey = smspec_node_get_gen_key1( node );
     const auto accu = prev ? ecl_sum_tstep_get_from_key( prev, genkey ) : 0;
 
-    switch( khash( smspec_node_get_keyword( node ) ) ) {
+    /* Keyword families tend to share parameters. Since C++'s support for
+     * partial application or currying is somewhat clunky (std::bind), we grow
+     * our own with a handful of lambdas. The optimizer might be able to
+     * reorder this function so that only the needed lambda is created (or even
+     * better - inline it). This is not really a very performance sensitive
+     * function, so regardless of optimisation conciseness triumphs.
+     *
+     * The binding of lambdas is also done for groups, fields etc.
+     */
+    const auto rate = [&]( rt phase )
+        { return get_rate( sim_well, phase, conversion_table ); };
+
+    const auto vol = [&]( rt phase )
+        { return get_vol( sim_well, phase, conversion_table ); };
+
+    const auto histprate = [&]( WT phase )
+        { return prodrate( state_well, tstep, phase, conversion_table ); };
+
+    const auto histpvol = [&]( WT phase )
+        { return prodvol( state_well, tstep, phase, conversion_table ); };
+
+    const auto histirate = [&]( WellInjector::TypeEnum phase )
+        { return injerate( state_well, tstep, phase, conversion_table ); };
+
+    const auto histivol = [&]( WellInjector::TypeEnum phase )
+        { return injevol( state_well, tstep, phase, conversion_table ); };
+
+    switch( keyword ) {
 
         /* Production rates */
-        case E::WWPR: return get_rate( sim_well, rt::wat, conversion_table );
-        case E::WOPR: return get_rate( sim_well, rt::oil, conversion_table );
-        case E::WGPR: return get_rate( sim_well, rt::gas, conversion_table );
-        case E::WLPR: return get_rate( sim_well, rt::wat, conversion_table )
-                           + get_rate( sim_well, rt::oil, conversion_table );
+        case E::WWPR: return rate( rt::wat );
+        case E::WOPR: return rate( rt::oil );
+        case E::WGPR: return rate( rt::gas );
+        case E::WLPR: return rate( rt::wat ) + rate( rt::oil );
 
         /* Production totals */
-        case E::WWPT: return accu + get_vol( sim_well, rt::wat, conversion_table );
-        case E::WOPT: return accu + get_vol( sim_well, rt::oil, conversion_table );
-        case E::WGPT: return accu + get_vol( sim_well, rt::gas, conversion_table );
-        case E::WLPT: return accu + get_vol( sim_well, rt::wat, conversion_table )
-                                  + get_vol( sim_well, rt::oil, conversion_table );
+        case E::WWPT: return accu + vol( rt::wat );
+        case E::WOPT: return accu + vol( rt::oil );
+        case E::WGPT: return accu + vol( rt::gas );
+        case E::WLPT: return accu + vol( rt::wat ) + vol( rt::oil );
 
         /* Production history rates */
-        case E::WWPRH: return prodrate( state_well, tstep, WT::wat, conversion_table );
-        case E::WOPRH: return prodrate( state_well, tstep, WT::oil, conversion_table );
-        case E::WGPRH: return prodrate( state_well, tstep, WT::gas, conversion_table );
-        case E::WLPRH: return prodrate( state_well, tstep, WT::wat, conversion_table ) +
-                              prodrate( state_well, tstep, WT::oil, conversion_table );
+        case E::WWPRH: return histprate( WT::wat );
+        case E::WOPRH: return histprate( WT::oil );
+        case E::WGPRH: return histprate( WT::gas );
+        case E::WLPRH: return histprate( WT::wat ) + histprate( WT::oil );
 
         /* Production history totals */
-        case E::WWPTH: return accu + prodvol( state_well, tstep, WT::wat, conversion_table );
-        case E::WOPTH: return accu + prodvol( state_well, tstep, WT::oil, conversion_table );
-        case E::WGPTH: return accu + prodvol( state_well, tstep, WT::gas, conversion_table );
-        case E::WLPTH: return accu + prodvol( state_well, tstep, WT::wat, conversion_table ) +
-                                     prodvol( state_well, tstep, WT::oil, conversion_table );
+        case E::WWPTH: return accu + histpvol( WT::wat );
+        case E::WOPTH: return accu + histpvol( WT::oil );
+        case E::WGPTH: return accu + histpvol( WT::gas );
+        case E::WLPTH: return accu + histpvol( WT::wat ) + histpvol( WT::oil );
 
         /* Production ratios */
-        case E::WWCT: return wwct( get_rate( sim_well, rt::wat, conversion_table ),
-                                   get_rate( sim_well, rt::oil, conversion_table ) );
+        case E::WWCT: return wct( rate( rt::wat ), rate( rt::oil ) );
 
         case E::WWCTH: return wwcth( state_well, tstep );
 
-        case E::WGOR: return wgor( get_rate( sim_well, rt::gas, conversion_table ),
-                                   get_rate( sim_well, rt::oil, conversion_table ) );
+        case E::WGOR: return gor( rate( rt::gas ), rate( rt::oil ) );
         case E::WGORH: return wgorh( state_well, tstep );
 
         /* Pressures */
@@ -390,24 +438,115 @@ inline double well_keywords( const smspec_node_type* node,
         /* Injection rates */
         /* TODO: read from sim or compute (how?) */
         /* TODO: Tests */
-        case E::WWIR: return -1 * (get_rate( sim_well, rt::wat, conversion_table ));
-        case E::WOIR: return -1 * (get_rate( sim_well, rt::oil, conversion_table ));
-        case E::WGIR: return -1 * (get_rate( sim_well, rt::gas, conversion_table ));
-        case E::WWIT: return accu - get_vol( sim_well, rt::wat, conversion_table );
-        case E::WOIT: return accu - get_vol( sim_well, rt::oil, conversion_table );
-        case E::WGIT: return accu - get_vol( sim_well, rt::gas, conversion_table );
+        case E::WWIR: return - rate( rt::wat );
+        case E::WOIR: return - rate( rt::oil );
+        case E::WGIR: return - rate( rt::gas );
+        case E::WWIT: return accu - vol( rt::wat );
+        case E::WOIT: return accu - vol( rt::oil );
+        case E::WGIT: return accu - vol( rt::gas );
 
-        case E::WWIRH: return injerate( state_well, tstep, WellInjector::WATER, conversion_table );
-        case E::WOIRH: return injerate( state_well, tstep, WellInjector::GAS, conversion_table );
-        case E::WGIRH: return injerate( state_well, tstep, WellInjector::OIL, conversion_table );
+        case E::WWIRH: return histirate( WellInjector::WATER );
+        case E::WOIRH: return histirate( WellInjector::GAS );
+        case E::WGIRH: return histirate( WellInjector::OIL );
 
-        case E::WWITH: return accu + injevol( state_well, tstep, WellInjector::WATER, conversion_table );
-        case E::WOITH: return accu + injevol( state_well, tstep, WellInjector::GAS, conversion_table );
-        case E::WGITH: return accu + injevol( state_well, tstep, WellInjector::OIL, conversion_table );
+        case E::WWITH: return accu + histivol( WellInjector::WATER );
+        case E::WOITH: return accu + histivol( WellInjector::GAS );
+        case E::WGITH: return accu + histivol( WellInjector::OIL );
 
         case E::UNSUPPORTED:
         default:
-            return 0;
+            return -1;
+    }
+}
+
+inline double sum( const std::vector< const data::Well* >& wells, rt phase ) {
+    double res = 0;
+
+    for( const auto* well : wells )
+        res += well->rates.get( phase, 0 );
+
+    return res;
+}
+
+
+inline double sum_rate( const std::vector< const data::Well* >& wells,
+                   rt phase,
+                   const double* conversion_table ) {
+
+    switch( phase ) {
+        case rt::wat: /* intentional fall-through */
+        case rt::oil: return convert( sum( wells, phase ),
+                                      dim::liquid_surface_rate,
+                                      conversion_table );
+
+        case rt::gas: return convert( sum( wells, phase ),
+                                      dim::gas_surface_rate,
+                                      conversion_table );
+        default: break;
+    }
+
+    throw std::runtime_error( "Reached impossible state in prodrate" );
+}
+
+inline double sum_vol( const std::vector< const data::Well* >& wells,
+                   rt phase,
+                   const double* conversion_table ) {
+
+    switch( phase ) {
+        case rt::wat: /* intentional fall-through */
+        case rt::oil: return convert( sum( wells, phase ),
+                                      dim::liquid_surface_volume,
+                                      conversion_table );
+
+        case rt::gas: return convert( sum( wells, phase ),
+                                      dim::gas_surface_volume,
+                                      conversion_table );
+        default: break;
+    }
+
+    throw std::runtime_error( "Reached impossible state in prodrate" );
+}
+
+inline double group_keywords( E keyword,
+                              const smspec_node_type* node,
+                              const ecl_sum_tstep_type* prev,
+                              const double* conversion_table,
+                              const std::vector< const data::Well* > sim_wells ) {
+
+    const auto* genkey = smspec_node_get_gen_key1( node );
+    const auto accu = prev ? ecl_sum_tstep_get_from_key( prev, genkey ) : 0;
+
+    const auto rate = [&]( rt phase ) {
+        return sum_rate( sim_wells, phase, conversion_table );
+    };
+
+    const auto vol = [&]( rt phase ) {
+        return sum_vol( sim_wells, phase, conversion_table );
+    };
+
+    switch( keyword ) {
+        /* Production rates */
+        case E::GWPR: return rate( rt::wat );
+        case E::GOPR: return rate( rt::oil );
+        case E::GGPR: return rate( rt::gas );
+        case E::GLPR: return rate( rt::wat ) + rate( rt::oil );
+
+        /* Production totals */
+        case E::GWPT: return accu + vol( rt::wat );
+        case E::GOPT: return accu + vol( rt::oil );
+        case E::GGPT: return accu + vol( rt::gas );
+
+        /* Injection rates */
+        case E::GWIR: return - rate( rt::wat );
+        case E::GGIR: return - rate( rt::gas );
+        case E::GGIT: return accu - vol( rt::gas );
+
+        /* Production ratios */
+        case E::GWCT: return wct( rate( rt::wat ), rate( rt::oil ) );
+        case E::GGOR: return gor( rate( rt::gas ), rate( rt::oil ) );
+
+        default:
+            return -1;
     }
 }
 
@@ -454,12 +593,21 @@ Summary::Summary( const EclipseState& st,
     conversions( get_conversions( st ) )
 {
     for( const auto& node : sum ) {
+
+        const auto keyword = khash( node.keyword() );
+
         auto* nodeptr = ecl_sum_add_var( this->ecl_sum.get(), node.keyword(),
                                             node.wgname(), node.num(), "", 0 );
 
-        switch( smspec_node_get_var_type( nodeptr ) ) {
+        const auto kw = static_cast< Summary::kwtype >( keyword );
+
+        switch( node.type() ) {
             case ECL_SMSPEC_WELL_VAR:
-                this->wvar[ node.wgname() ].push_back( nodeptr );
+                this->wvar[ node.wgname() ].emplace_back( kw, nodeptr );
+                break;
+
+            case ECL_SMSPEC_GROUP_VAR:
+                this->gvar[ node.wgname() ].emplace_back( kw, nodeptr );
                 break;
 
             default:
@@ -482,11 +630,29 @@ void Summary::add_timestep( int report_step,
         const auto& state_well = es.getSchedule()->getWell( wname );
         const auto& sim_well = wells.at( wname );
 
-        for( const auto* node : pair.second ) {
-            auto val = well_keywords( node, this->prev_tstep,
+        for( const auto& node : pair.second ) {
+            auto val = well_keywords( static_cast< E >( node.kw ),
+                                      node.node, this->prev_tstep,
                                       this->conversions, sim_well,
                                       state_well, report_step );
-            ecl_sum_tstep_set_from_node( tstep, node, val );
+            ecl_sum_tstep_set_from_node( tstep, node.node, val );
+        }
+    }
+
+    /* calculate the values for the Group-family of keywords. */
+    for( const auto& pair : this->gvar ) {
+        const auto* gname = pair.first;
+        const auto& state_group = *es.getSchedule()->getGroup( gname );
+
+        std::vector< const data::Well* > sim_wells;
+        for( const auto& well : state_group.getWells( report_step ) )
+            sim_wells.push_back( &wells.at( well.first ) );
+
+        for( const auto& node : pair.second ) {
+            auto val = group_keywords( static_cast< E >( node.kw ),
+                                       node.node, this->prev_tstep,
+                                       this->conversions, sim_wells );
+            ecl_sum_tstep_set_from_node( tstep, node.node, val );
         }
     }
 
