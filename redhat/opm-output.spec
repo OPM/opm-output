@@ -2,7 +2,7 @@
 # spec file for package opm-output
 #
 
-%define tag rc1
+%define tag final
 
 Name:           opm-output
 Version:        2016.04
