@@ -93,6 +93,8 @@ ROP
 --  Group data --
 GPR
 /
+GLPR
+/
 GOPT
 /
 GGPT
@@ -109,13 +111,39 @@ GWPR
 /
 GGIR
 /
+GGIRH
+/
 GGIT
+/
+GGITH
 /
 GWCT
 /
 GGOR
 /
 GWIR
+/
+GWIT
+/
+GWIRH
+/
+GWITH
+/
+GWPRH
+/
+GOPRH
+/
+GGPRH
+/
+GLPRH
+/
+GWPTH
+/
+GOPTH
+/
+GGPTH
+/
+GLPTH
 /
 -- Well Data
 -- Production Rates
@@ -146,23 +174,26 @@ WLPTH
 WWIR
  W_3
 /
+WWIT
+ W_3
+/
 WWIRH
   W_3
 /
-
-WGIR
-  W_3
-/
-
-WGIRH
+WWITH
   W_3
 /
 
 WGIT
   W_3
 /
-
+WGIR
+  W_3
+/
 WGIRH
+  W_3
+/
+WGITH
   W_3
 /
 
@@ -197,6 +228,11 @@ WGOR
 /
 WGORH
 /
+WGLR
+/
+WGLRH
+/
+
 
 -- Performance
 WBHP
@@ -264,7 +300,7 @@ WCONHIST
 
 WCONINJH
 -- Injection historical rates (water only, as we only support pure injectors)
-    W_3 WATER STOP 259200 /
+    W_3 WATER STOP 30.0 /
 /
 
 TSTEP
