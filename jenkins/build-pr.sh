@@ -2,12 +2,18 @@
 
 source `dirname $0`/build-opm-output.sh
 
+declare -a upstreams
+upstreams=(opm-parser
+           opm-material
+           opm-core)
+
+declare -A upstreamRev
+upstreamRev[opm-parser]=master
+upstreamRev[opm-material]=master
+upstreamRev[opm-core]=master
+
 ERT_REVISION=master
 OPM_COMMON_REVISION=master
-OPM_PARSER_REVISION=master
-OPM_MATERIAL_REVISION=master
-OPM_CORE_REVISION=master
-OPM_OUTPUT_REVISION=$sha1
 
 if grep -q "ert=" <<< $ghprbCommentBody
 then
@@ -19,24 +25,40 @@ then
   OPM_COMMON_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-common=([0-9]+).*/\1/g'`/merge
 fi
 
-if grep -q "opm-parser=" <<< $ghprbCommentBody
-then
-  OPM_PARSER_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-parser=([0-9]+).*/\1/g'`/merge
-fi
+for upstream in $upstreams
+do
+  if grep -q "$upstream=" <<< $ghprbCommentBody
+  then
+    upstreamRev[$upstream]=pull/`echo $ghprbCommentBody | sed -r "s/.*$upstream=([0-9]+).*/\1/g"`/merge
+  fi
+done
 
-if grep -q "opm-material=" <<< $ghprbCommentBody
-then
-  OPM_MATERIAL_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-material=([0-9]+).*/\1/g'`/merge
-fi
-
-if grep -q "opm-core=" <<< $ghprbCommentBody
-then
-  OPM_CORE_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-core=([0-9]+).*/\1/g'`/merge
-fi
-
-echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=$OPM_PARSER_REVISION opm-material=$OPM_MATERIAL_REVISION opm-core=$OPM_CORE_REVISION opm-output=$OPM_OUTPUT_REVISION"
+echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=${upstreamRev[opm-parser]} opm-material=${upstreamRev[opm-material]} opm-core=${upstreamRev[opm-core]} opm-output=$sha1"
 
 build_opm_output
 test $? -eq 0 || exit 1
 
-cp serial/build-opm-output/testoutput.xml .
+# If no downstream builds we are done
+if ! grep -q "with downstreams" <<< $ghprbCommentBody
+then
+  cp serial/build-opm-output/testoutput.xml .
+  exit 0
+fi
+
+# Downstream revisions
+declare -a downstreams
+downstreams=(opm-grid
+             opm-simulators
+             opm-upscaling)
+
+declare -A downstreamRev
+downstreamRev[opm-grid]=master
+downstreamRev[opm-simulators]=master
+downstreamRev[opm-upscaling]=master
+
+source $WORKSPACE/deps/opm-common/jenkins/setup-opm-data.sh
+source $WORKSPACE/deps/opm-common/jenkins/build-opm-module.sh
+
+build_downstreams opm-output
+
+test $? -eq 0 || exit 1
