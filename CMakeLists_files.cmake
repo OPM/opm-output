@@ -16,6 +16,7 @@ list( APPEND MAIN_SOURCE_FILES
 list (APPEND PUBLIC_HEADER_FILES
         opm/output/OutputWriter.hpp
         opm/output/Wells.hpp
+        opm/output/Cells.hpp
         opm/output/eclipse/CornerpointChopper.hpp
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
