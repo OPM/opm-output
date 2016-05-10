@@ -2,7 +2,6 @@
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
 list( APPEND MAIN_SOURCE_FILES
-        opm/output/OutputWriter.cpp
         opm/output/eclipse/EclipseGridInspector.cpp
         opm/output/eclipse/EclipseReader.cpp
         opm/output/eclipse/EclipseWriteRFTHandler.cpp
