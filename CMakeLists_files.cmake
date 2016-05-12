@@ -4,7 +4,6 @@
 list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseGridInspector.cpp
         opm/output/eclipse/EclipseReader.cpp
-        opm/output/eclipse/EclipseWriteRFTHandler.cpp
         opm/output/eclipse/EclipseWriter.cpp
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/writeECLData.cpp
@@ -21,7 +20,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseIOUtil.hpp
         opm/output/eclipse/EclipseReader.hpp
         opm/output/eclipse/EclipseUnits.hpp
-        opm/output/eclipse/EclipseWriteRFTHandler.hpp
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/writeECLData.hpp
