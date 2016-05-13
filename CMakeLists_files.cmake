@@ -27,7 +27,7 @@ list (APPEND PUBLIC_HEADER_FILES
 
 list (APPEND TEST_SOURCE_FILES
         tests/test_EclipseWriter.cpp
-        tests/test_EclipseWriteRFTHandler.cpp
+        tests/test_RFT.cpp
         tests/test_writenumwells.cpp
         tests/test_writeReadRestartFile.cpp
         tests/test_Wells.cpp
