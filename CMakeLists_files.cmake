@@ -29,7 +29,7 @@ list (APPEND TEST_SOURCE_FILES
         tests/test_EclipseWriter.cpp
         tests/test_RFT.cpp
         tests/test_writenumwells.cpp
-        tests/test_writeReadRestartFile.cpp
+        tests/test_Restart.cpp
         tests/test_Wells.cpp
         tests/test_Summary.cpp
 )
