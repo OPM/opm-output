@@ -7,7 +7,6 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseWriter.cpp
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/writeECLData.cpp
-        opm/output/vag/vag.cpp
         opm/output/vtk/writeVtkData.cpp
     )
 
@@ -23,7 +22,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/writeECLData.hpp
-        opm/output/vag/vag.hpp
         opm/output/vtk/writeVtkData.hpp
     )
 
