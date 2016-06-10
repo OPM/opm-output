@@ -21,23 +21,20 @@
 #ifndef OPM_WRITEECLDATA_HEADER_INCLUDED
 #define OPM_WRITEECLDATA_HEADER_INCLUDED
 
-
-#include <opm/core/utility/DataMap.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-
 #include <string>
 
-struct UnstructuredGrid;
+#include <opm/output/Cells.hpp>
 
 namespace Opm
 {
 
   // ECLIPSE output for general grids.
-  void writeECLData(const UnstructuredGrid& grid,
-                    const DataMap& data,
+  void writeECLData(int nx, int ny, int nz,
+                    int number_of_cells,
+                    data::Solution,
                     const int current_step,
                     const double current_time,
-                    const boost::posix_time::ptime& current_date_time,
+                    time_t current_posix_time,
                     const std::string& output_dir,
                     const std::string& base_name);
 

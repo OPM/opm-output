@@ -21,8 +21,10 @@
 #define OPM_OUTPUT_WRITER_HPP
 
 #include <memory>  // unique_ptr, shared_ptr
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+
+#include <opm/output/Cells.hpp>
+#include <opm/output/Wells.hpp>
 
 struct UnstructuredGrid;
 
@@ -31,7 +33,6 @@ namespace Opm {
 // forward declaration
 class EclipseState;
 namespace parameter { class ParameterGroup; }
-class SimulationDataContainer;
 class WellState;
 struct PhaseUsage;
 
@@ -52,10 +53,10 @@ struct PhaseUsage;
  *          OutputWriter::create (params, parser);
  *
  *  // before the first timestep
- *  writer->writeInit (timer);
+ *  writer->writeInit( current_posix_time, time_since_epoch_at_start );
  *
  *  // after each timestep
- *  writer->writeTimeStep (timer, state, wellState);
+ *  writer->writeTimeStep
  *
  * \endcode
  */
@@ -74,44 +75,28 @@ public:
      * This routine should be called before the first timestep (i.e. when
      * timer.currentStepNum () == 0)
      */
-    virtual void writeInit(const SimulatorTimerInterface &timer, const NNC& nnc = NNC()) = 0;
+    virtual void writeInit( const NNC& nnc ) = 0;
 
     /*!
      * \brief Write a blackoil reservoir state to disk for later inspection with
      *        visualization tools like ResInsight
      *
-     * \param[in] timer          The timer providing time, time step, etc. information
-     * \param[in] reservoirState The thermodynamic state of the reservoir
-     * \param[in] wellState      The production/injection data for all wells
+     * \param[in] report_step           The current report step
+     * \param[in] current_posix_time    Seconds elapsed since epoch
+     * \param[in] seconds_elapsed       Seconds elapsed since simulation start
+     * \param[in] reservoirState        The thermodynamic state of the reservoir
+     * \param[in] wells                 Well data
      *
      * This routine should be called after the timestep has been advanced,
      * i.e. timer.currentStepNum () > 0.
      */
-    virtual void writeTimeStep(const SimulatorTimerInterface& timer,
-                               const SimulationDataContainer& reservoirState,
-                               const WellState& wellState,
-                               bool  isSubstep) = 0;
+    virtual void writeTimeStep( int report_step,
+                                time_t current_posix_time,
+                                double seconds_elapsed,
+                                data::Solution reservoirState,
+                                data::Wells,
+                                bool  isSubstep) = 0;
 
-    /*!
-     * Create a suitable set of output formats based on configuration.
-     *
-     * @param params Configuration properties. This function will setup a
-     *               multiplexer of applicable output formats based on the
-     *               desired configuration values.
-     *
-     * @param deck Input deck used to set up the simulation.
-     *
-     * @param eclipseState The internalized input deck.
-     *
-     * @return       Pointer to a multiplexer to all applicable output formats.
-     *
-     * @see Opm::share_obj
-     */
-    static std::unique_ptr <OutputWriter>
-    create (const parameter::ParameterGroup& params,
-            std::shared_ptr <const EclipseState> eclipseState,
-            const Opm::PhaseUsage &phaseUsage,
-            std::shared_ptr <const UnstructuredGrid> grid);
 };
 
 } // namespace Opm

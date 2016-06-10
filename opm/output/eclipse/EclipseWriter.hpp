@@ -22,69 +22,40 @@
 #ifndef OPM_ECLIPSE_WRITER_HPP
 #define OPM_ECLIPSE_WRITER_HPP
 
-#include <opm/output/OutputWriter.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/wells.h> // WellType
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
-
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
-#include <opm/parser/eclipse/Units/UnitSystem.hpp>
-
-#include <ert/ecl/ecl_util.h>
 
 #include <string>
 #include <vector>
 #include <array>
 #include <memory>
 
+#include <opm/output/Cells.hpp>
+#include <opm/output/Wells.hpp>
 
 namespace Opm {
 
-// forward declarations
-namespace EclipseWriterDetails {
-class Summary;
-}
-
-class SimulationDataContainer;
-class WellState;
-
-namespace parameter { class ParameterGroup; }
+class EclipseState;
 
 /*!
  * \brief A class to write the reservoir state and the well state of a
  *        blackoil simulation to disk using the Eclipse binary format.
- *
- * This class only writes files if the 'write_output' parameter is set
- * to 1. It needs the ERT libraries to write to disk, so if the
- * 'write_output' parameter is set but ERT is not available, all
- * methods throw a std::runtime_error.
  */
-class EclipseWriter : public OutputWriter
-{
+class EclipseWriter {
 public:
     /*!
      * \brief Sets the common attributes required to write eclipse
      *        binary files using ERT.
      */
-    EclipseWriter(Opm::EclipseStateConstPtr eclipseState,
+    EclipseWriter(std::shared_ptr< const EclipseState >,
                   int numCells,
                   const int* compressedToCartesianCellIdx);
-
-    /**
-     * We need a destructor in the compilation unit to avoid the
-     * EclipseSummary being a complete type here.
-     */
-    virtual ~EclipseWriter ();
 
     /**
      * Write the static eclipse data (grid, PVT curves, etc) to disk.
      *
      * If NNC is given, writes TRANNNC keyword.
      */
-     virtual void writeInit(const SimulatorTimerInterface &timer,
-                            const NNC& nnc = NNC());
+    void writeInit( const NNC& nnc );
 
     /*!
      * \brief Write a reservoir state and summary information to disk.
@@ -96,43 +67,21 @@ public:
      * The summary information can then be visualized using tools from
      * ERT or ECLIPSE. Note that calling this method is only
      * meaningful after the first time step has been completed.
-     *
-     * \param[in] timer          The timer providing time step and time information
-     * \param[in] reservoirState The thermodynamic state of the reservoir
-     * \param[in] wellState      The production/injection data for all wells
      */
-    virtual void writeTimeStep(const SimulatorTimerInterface& timer,
-                               const SimulationDataContainer& reservoirState,
-                               const WellState& wellState,
-                               bool isSubstep);
+    void writeTimeStep( int report_step,
+                        double seconds_elapsed,
+                        data::Solution,
+                        data::Wells,
+                        bool isSubstep);
 
-
-    static int eclipseWellTypeMask(WellType wellType, WellInjector::TypeEnum injectorType);
-    static int eclipseWellStatusMask(WellCommon::StatusEnum wellStatus);
-    static ert_ecl_unit_enum convertUnitTypeErtEclUnitEnum(UnitSystem::UnitType unit);
+    EclipseWriter( const EclipseWriter& ) = delete;
+    ~EclipseWriter();
 
 private:
-    Opm::EclipseStateConstPtr eclipseState_;
-    int numCells_;
-    std::array<int, 3> cartesianSize_;
-    const int* compressedToCartesianCellIdx_;
-    std::vector< int > gridToEclipseIdx_;
-    double deckToSiPressure_;
-    double deckToSiTemperatureFactor_;
-    double deckToSiTemperatureOffset_;
-    bool enableOutput_;
-    int writeStepIdx_;
-    int reportStepIdx_;
-    std::string outputDir_;
-    std::string baseName_;
-    PhaseUsage phaseUsage_; // active phases in the input deck
-    std::shared_ptr<EclipseWriterDetails::Summary> summary_;
+    class Impl;
+    std::unique_ptr< Impl > impl;
 
-    void init(Opm::EclipseStateConstPtr eclipseState);
 };
-
-typedef std::shared_ptr<EclipseWriter> EclipseWriterPtr;
-typedef std::shared_ptr<const EclipseWriter> EclipseWriterConstPtr;
 
 } // namespace Opm
 

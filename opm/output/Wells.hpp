@@ -20,6 +20,7 @@
 #ifndef OPM_OUTPUT_WELLS_HPP
 #define OPM_OUTPUT_WELLS_HPP
 
+#include <initializer_list>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -88,7 +89,32 @@ namespace Opm {
         std::map< Completion::active_index, Completion > completions;
     };
 
-    typedef std::map< std::string, Well > Wells;
+    struct Wells {
+        using value_type = std::map< std::string, Well >::value_type;
+        using iterator = std::map< std::string, Well >::iterator;
+
+        inline Well& operator[]( const std::string& );
+        inline Well& at( const std::string& );
+        inline const Well& at( const std::string& ) const;
+        template< typename... Args >
+        inline std::pair< iterator, bool > emplace( Args&&... );
+
+        inline Wells() = default;
+        inline Wells( std::initializer_list< value_type > );
+        inline Wells( std::initializer_list< value_type >,
+                      std::vector< double > bhp,
+                      std::vector< double > temperature,
+                      std::vector< double > wellrates,
+                      std::vector< double > perf_pressure,
+                      std::vector< double > perf_rates );
+
+        std::map< std::string, Well > wells;
+        std::vector< double > bhp;
+        std::vector< double > temperature;
+        std::vector< double > well_rate;
+        std::vector< double > perf_pressure;
+        std::vector< double > perf_rate;
+    };
 
     /* IMPLEMENTATIONS */
 
@@ -150,7 +176,43 @@ namespace Opm {
     inline double& Rates::get_ref( opt m ) {
         return const_cast< double& >(
                 static_cast< const Rates* >( this )->get_ref( m )
-               );
+                );
+    }
+
+    inline Well& Wells::operator[]( const std::string& k ) {
+        return this->wells[ k ];
+    }
+
+    inline Well& Wells::at( const std::string& k ) {
+        return this->wells.at( k );
+    }
+
+    inline const Well& Wells::at( const std::string& k ) const {
+        return this->wells.at( k );
+    }
+
+    template< typename... Args >
+    inline std::pair< Wells::iterator, bool > Wells::emplace( Args&&... args ) {
+        return this->wells.emplace( std::forward< Args >( args )... );
+    }
+
+    inline Wells::Wells( std::initializer_list< Wells::value_type > l ) :
+        wells( l )
+    {}
+
+    inline Wells::Wells( std::initializer_list< value_type > l,
+                         std::vector< double > b,
+                         std::vector< double > t,
+                         std::vector< double > w,
+                         std::vector< double > pp,
+                         std::vector< double > pr ) :
+        wells( l ),
+        bhp( b ),
+        temperature( t ),
+        well_rate( w ),
+        perf_pressure( pp ),
+        perf_rate( pr ) {
+        // TODO: size asserts and sanity checks in debug mode
     }
 
     }

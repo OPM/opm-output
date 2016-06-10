@@ -22,41 +22,18 @@
 #include "config.h"
 #endif
 
-#include <opm/core/grid.h>
 #include <opm/output/eclipse/writeECLData.hpp>
-#include <opm/core/utility/Units.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/parser/eclipse/Units/ConversionFactors.hpp>
 
 #include <vector>
 
 #ifdef HAVE_ERT // This one goes almost to the bottom of the file
 
-#include <ert/ecl/ecl_grid.h>
-#include <ert/ecl/ecl_util.h>
 #include <ert/ecl/ecl_rst_file.h>
+#include <ert/util/ert_unique_ptr.hpp>
 
 
-namespace Opm
-{
-
-  static ecl_kw_type * ecl_kw_wrapper( const UnstructuredGrid& grid,
-                                       const std::string& kw_name ,
-                                       const std::vector<double> * data ,
-                                       int offset ,
-                                       int stride ) {
-
-    if (stride <= 0)
-      OPM_THROW(std::runtime_error, "Vector strides must be positive. Got stride = " << stride);
-    if ((stride * std::vector<double>::size_type(grid.number_of_cells)) != data->size())
-      OPM_THROW(std::runtime_error, "Internal mismatch grid.number_of_cells: " << grid.number_of_cells << " data size: " << data->size() / stride);
-    {
-      ecl_kw_type * ecl_kw = ecl_kw_alloc( kw_name.c_str() , grid.number_of_cells , ECL_FLOAT_TYPE );
-      for (int i=0; i < grid.number_of_cells; i++)
-        ecl_kw_iset_float( ecl_kw , i , (*data)[i*stride + offset]);
-      return ecl_kw;
-    }
-  }
-
+namespace Opm {
 
   /*
     This function will write the data solution data in the DataMap
@@ -85,11 +62,11 @@ namespace Opm
     an ECLIPSE filename according to this conventions.
   */
 
-  void writeECLData(const UnstructuredGrid& grid,
-                    const DataMap& data,
+  void writeECLData(int nx, int ny, int nz, int nactive,
+                    data::Solution data,
                     const int current_step,
                     const double current_time,
-                    const boost::posix_time::ptime& current_date_time,
+                    time_t current_posix_time,
                     const std::string& output_dir,
                     const std::string& base_name) {
 
@@ -98,20 +75,7 @@ namespace Opm
 
     char * filename         = ecl_util_alloc_filename(output_dir.c_str() , base_name.c_str() , file_type , fmt_file , current_step );
     int phases              = ECL_OIL_PHASE + ECL_WATER_PHASE;
-    time_t date             = 0;
-    int nx                  = grid.cartdims[0];
-    int ny                  = grid.cartdims[1];
-    int nz                  = grid.cartdims[2];
-    int nactive             = grid.number_of_cells;
     ecl_rst_file_type * rst_file;
-
-    {
-      using namespace boost::posix_time;
-      ptime t0( boost::gregorian::date(1970 , 1 ,1) );
-      time_duration::sec_type seconds = (current_date_time - t0).total_seconds();
-
-      date = time_t( seconds );
-    }
 
     if (current_step > 0 && file_type == ECL_UNIFIED_RESTART_FILE)
       rst_file = ecl_rst_file_open_append( filename );
@@ -137,34 +101,36 @@ namespace Opm
       rsthead_data.ncwmax    = ncwmax;
       rsthead_data.nactive   = nactive;
       rsthead_data.phase_sum = phases;
-      rsthead_data.sim_time  = date;
+      rsthead_data.sim_time  = current_posix_time;
 
-      rsthead_data.sim_days = Opm::unit::convert::to(current_time, Opm::unit::day); //Data for doubhead
+      rsthead_data.sim_days = current_time * Opm::Metric::Time; //Data for doubhead
 
       ecl_rst_file_fwrite_header( rst_file , current_step , &rsthead_data);
     }
 
     ecl_rst_file_start_solution( rst_file );
 
-    {
-      DataMap::const_iterator i = data.find("pressure");
-      if (i != data.end()) {
-        ecl_kw_type * pressure_kw = ecl_kw_wrapper( grid , "PRESSURE" , i->second , 0 , 1);
-        ecl_rst_file_add_kw( rst_file , pressure_kw );
-        ecl_kw_free( pressure_kw );
-      }
+    using eclkw = ERT::ert_unique_ptr< ecl_kw_type, ecl_kw_free >;
+    using ds = data::Solution::key;
+
+    if( data.has( ds::PRESSURE ) ) {
+        const auto& pressure = data[ ds::PRESSURE ];
+
+        eclkw kw( ecl_kw_alloc( "PRESSURE", nactive, ECL_FLOAT_TYPE ) );
+        for( int i = 0; i < nactive; i++ )
+            ecl_kw_iset_float( kw.get(), i, pressure[ i ] );
+
+        ecl_rst_file_add_kw( rst_file, kw.get() );
     }
 
-    {
-      DataMap::const_iterator i = data.find("saturation");
-      if (i != data.end()) {
-        if (int(i->second->size()) != 2 * grid.number_of_cells) {
-          OPM_THROW(std::runtime_error, "writeECLData() requires saturation field to have two phases.");
-        }
-        ecl_kw_type * swat_kw = ecl_kw_wrapper( grid , "SWAT" , i->second , 0 , 2);
-        ecl_rst_file_add_kw( rst_file , swat_kw );
-        ecl_kw_free( swat_kw );
-      }
+    if( data.has( ds::SWAT ) ) {
+        const auto& swat = data[ ds::SWAT ];
+
+        eclkw kw( ecl_kw_alloc( "SWAT", nactive, ECL_FLOAT_TYPE ) );
+        for( int i = 0; i < nactive; i++ )
+            ecl_kw_iset_float( kw.get(), i, swat[ i ] );
+
+        ecl_rst_file_add_kw( rst_file, kw.get() );
     }
 
     ecl_rst_file_end_solution( rst_file );
@@ -178,15 +144,18 @@ namespace Opm
 namespace Opm
 {
 
-    void writeECLData(const UnstructuredGrid&,
-                      const DataMap&,
+    void writeECLData(int, int, int, int,
+                      data::Solution,
                       const int,
                       const double,
-                      const boost::posix_time::ptime&,
+                      time_t,
                       const std::string&,
                       const std::string&)
     {
-        OPM_THROW(std::runtime_error, "Cannot call writeECLData() without ERT library support. Reconfigure opm-core with ERT support and recompile.");
+        throw std::runtime_error(
+            "Cannot call writeECLData() without ERT library support. "
+            "Reconfigure opm-output with ERT support and recompile."
+            );
     }
 }
 

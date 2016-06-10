@@ -239,30 +239,51 @@ inline double wglrh( const Well& w, size_t ts ) {
     return glr( p.GasRate, p.WaterRate + p.OilRate );
 }
 
+using measure = UnitSystem::measure;
 enum class WT { wat, oil, gas };
 inline double prodrate( const Well& w,
                         size_t timestep,
                         WT wt,
                         const UnitSystem& units ) {
 
-    if( !w.isProducer( timestep ) ) return 0;
+    /*
+     * For well data, looking up historical rates (both for production and
+     * injection) before simulation actually starts is impossible and
+     * nonsensical. We therefore default to writing zero (which is what eclipse
+     * seems to do as well). Additionally, when an input deck is parsed,
+     * timesteps and rates are structured as such:
+     *
+     * The rates observed in timestep N is denoted at timestep N-1, i.e. at the
+     * **end** of the previous timestep. Which means that what observed at
+     * timestep 1 is denoted at timestep 0, and what happens "on" timestep 0
+     * doesn't exist and would in code give an arithmetic error. We therefore
+     * special-case timestep N == 0, and for all other timesteps look up the
+     * value *reported* at N-1 which applies to timestep N.
+     */
+    if( timestep == 0 ) return 0.0;
 
-    const auto& p = w.getProductionProperties( timestep );
+    if( !w.isProducer( timestep - 1 ) ) return  0;
+
+    const auto& p = w.getProductionProperties( timestep - 1 );
     switch( wt ) {
-        case WT::wat: return units.from_si( UnitSystem::measure::liquid_surface_rate, p.WaterRate );
-        case WT::oil: return units.from_si( UnitSystem::measure::liquid_surface_rate, p.OilRate );
-        case WT::gas: return units.from_si( UnitSystem::measure::gas_surface_rate, p.GasRate );
+        case WT::wat: return units.from_si( measure::liquid_surface_rate, p.WaterRate );
+        case WT::oil: return units.from_si( measure::liquid_surface_rate, p.OilRate );
+        case WT::gas: return units.from_si( measure::gas_surface_rate, p.GasRate );
     }
 
     throw std::runtime_error( "Reached impossible state in prodrate" );
 }
 
 inline double prodvol( const Well& w,
+                       double duration,
                        size_t timestep,
                        WT wt,
                        const UnitSystem& units ) {
+
+    if( timestep == 0 ) return 0.0;
+
     const auto rate = prodrate( w, timestep, wt, units );
-    return rate * units.from_si( UnitSystem::measure::time, 1 );
+    return rate * duration * units.from_si( measure::time, 1 );
 }
 
 inline double injerate( const Well& w,
@@ -270,8 +291,10 @@ inline double injerate( const Well& w,
                         WellInjector::TypeEnum wt,
                        const UnitSystem& units ) {
 
-    if( !w.isInjector( timestep ) ) return 0;
-    const auto& i = w.getInjectionProperties( timestep );
+    if( timestep == 0 ) return 0.0;
+
+    if( !w.isInjector( timestep - 1 ) ) return 0;
+    const auto& i = w.getInjectionProperties( timestep - 1 );
 
     /* we don't support mixed injectors, so querying a water injector for
      * gas rate gives 0.0
@@ -287,39 +310,44 @@ inline double injerate( const Well& w,
 }
 
 inline double injevol( const Well& w,
+                       double duration,
                        size_t timestep,
                        WellInjector::TypeEnum wt,
                        const UnitSystem& units ) {
 
-    const auto rate = injerate( w, timestep, wt, units );
-    return rate * units.from_si( UnitSystem::measure::time, 1 );
+    if( timestep == 0 ) return 0.0;
+
+    const auto rate = injerate( w, timestep - 1, wt, units );
+    return rate * duration * units.from_si( units.measure::time, 1 );
 }
 
 inline double get_rate( const data::Well& w,
                         rt phase,
                         const UnitSystem& units ) {
-    const auto x = w.rates.get( phase, 0.0 );
 
+    const auto rate = w.rates.get( phase, 0.0 );
     switch( phase ) {
-        case rt::gas: return units.from_si( UnitSystem::measure::gas_surface_rate, x );
-        default: return units.from_si( UnitSystem::measure::liquid_surface_rate, x );
+        case rt::gas: return units.from_si( measure::gas_surface_rate, rate );
+        default: return units.from_si( measure::liquid_surface_rate, rate );
     }
 }
 
 inline double get_vol( const data::Well& w,
+                       double duration,
                        rt phase,
                        const UnitSystem& units ) {
 
-    const auto x = w.rates.get( phase, 0.0 );
+    const auto vol = duration * w.rates.get( phase, 0.0 );
     switch( phase ) {
-        case rt::gas: return units.from_si( UnitSystem::measure::gas_surface_volume, x );
-        default: return units.from_si( UnitSystem::measure::liquid_surface_volume, x );
+        case rt::gas: units.from_si( measure::gas_surface_volume, vol );
+        default: return units.from_si( measure::liquid_surface_volume, vol );
     }
 }
 
 inline double well_keywords( E keyword,
                              const smspec_node_type* node,
                              const ecl_sum_tstep_type* prev,
+                             double duration,
                              const UnitSystem& units,
                              const data::Well& sim_well,
                              const Well& state_well,
@@ -341,19 +369,19 @@ inline double well_keywords( E keyword,
         { return get_rate( sim_well, phase, units ); };
 
     const auto vol = [&]( rt phase )
-        { return get_vol( sim_well, phase, units ); };
+        { return get_vol( sim_well, duration, phase, units ); };
 
     const auto histprate = [&]( WT phase )
         { return prodrate( state_well, tstep, phase, units ); };
 
     const auto histpvol = [&]( WT phase )
-        { return prodvol( state_well, tstep, phase, units ); };
+        { return prodvol( state_well, duration, tstep, phase, units ); };
 
     const auto histirate = [&]( WellInjector::TypeEnum phase )
         { return injerate( state_well, tstep, phase, units ); };
 
     const auto histivol = [&]( WellInjector::TypeEnum phase )
-        { return injevol( state_well, tstep, phase, units ); };
+        { return injevol( state_well, duration, tstep, phase, units ); };
 
     switch( keyword ) {
 
@@ -449,20 +477,35 @@ inline double sum_rate( const std::vector< const data::Well* >& wells,
 }
 
 inline double sum_vol( const std::vector< const data::Well* >& wells,
+                       double duration,
                        rt phase,
                        const UnitSystem& units ) {
 
     switch( phase ) {
         case rt::wat: /* intentional fall-through */
-        case rt::oil: return units.from_si( UnitSystem::measure::liquid_surface_volume,
-                                            sum( wells, phase ) );
+        case rt::oil: return units.from_si( units.measure::liquid_surface_volume,
+                                            duration * sum( wells, phase ) );
 
-        case rt::gas: return units.from_si( UnitSystem::measure::gas_surface_volume,
-                                            sum( wells, phase ) );
+        case rt::gas: return units.from_si( units.measure::gas_surface_volume,
+                                            duration * sum( wells, phase ) );
         default: break;
     }
 
     throw std::runtime_error( "Reached impossible state in sum_vol" );
+}
+
+template< typename F, typename Phase >
+inline double sum_hist( F f,
+                        const WellSet& wells,
+                        double duration,
+                        size_t tstep,
+                        Phase phase,
+                        const UnitSystem& units ) {
+    double res = 0;
+    for( const auto& well : wells )
+        res += f( *well.second, duration, tstep, phase, units );
+
+    return res;
 }
 
 template< typename F, typename Phase >
@@ -481,6 +524,7 @@ inline double sum_hist( F f,
 inline double group_keywords( E keyword,
                               const smspec_node_type* node,
                               const ecl_sum_tstep_type* prev,
+                              double duration,
                               const UnitSystem& units,
                               size_t tstep,
                               const std::vector< const data::Well* >& sim_wells,
@@ -494,7 +538,7 @@ inline double group_keywords( E keyword,
     };
 
     const auto vol = [&]( rt phase ) {
-        return sum_vol( sim_wells, phase, units );
+        return sum_vol( sim_wells, duration, phase, units );
     };
 
     const auto histprate = [&]( WT phase ) {
@@ -502,7 +546,7 @@ inline double group_keywords( E keyword,
     };
 
     const auto histpvol = [&]( WT phase ) {
-        return sum_hist( prodvol, state_wells, tstep, phase, units );
+        return sum_hist( prodvol, state_wells, duration, tstep, phase, units );
     };
 
     const auto histirate = [&]( WellInjector::TypeEnum phase ) {
@@ -510,7 +554,7 @@ inline double group_keywords( E keyword,
     };
 
     const auto histivol = [&]( WellInjector::TypeEnum phase ) {
-        return sum_hist( injevol, state_wells, tstep, phase, units );
+        return sum_hist( injevol, state_wells, duration, tstep, phase, units );
     };
 
     switch( keyword ) {
@@ -562,7 +606,7 @@ inline double group_keywords( E keyword,
 namespace out {
 
 Summary::Summary( const EclipseState& st, const SummaryConfig& sum ) :
-    Summary( st, sum, st.getTitle().c_str() )
+    Summary( st, sum, st.getIOConfig()->getBaseName().c_str() )
 {}
 
 Summary::Summary( const EclipseState& st,
@@ -613,25 +657,32 @@ Summary::Summary( const EclipseState& st,
 }
 
 void Summary::add_timestep( int report_step,
-                            double step_duration,
+                            double secs_elapsed,
                             const EclipseState& es,
                             const data::Wells& wells ) {
-    this->duration += step_duration;
-    auto* tstep = ecl_sum_add_tstep( this->ecl_sum.get(), report_step, this->duration );
+
+    auto* tstep = ecl_sum_add_tstep( this->ecl_sum.get(), report_step, secs_elapsed );
+    const double duration = secs_elapsed - this->prev_time_elapsed;
+
+    static const data::Well dummy_well = {};
 
     /* calculate the values for the Well-family of keywords. */
     for( const auto& pair : this->wvar ) {
         const auto* wname = pair.first;
 
         const auto& state_well = es.getSchedule()->getWell( wname );
-        const auto& sim_well = wells.at( wname );
+        const auto& sim_well = wells.wells.find( wname ) != wells.wells.end()
+                             ? wells.at( wname )
+                             : dummy_well;
 
         for( const auto& node : pair.second ) {
             auto val = well_keywords( static_cast< E >( node.kw ),
                                       node.node, this->prev_tstep,
+                                      duration,
                                       es.getUnits(), sim_well,
                                       state_well, report_step );
-            ecl_sum_tstep_set_from_node( tstep, node.node, val );
+            ecl_sum_tstep_set_from_node(
+                    tstep, node.node, val > 0 ? val : 0.0 );
         }
     }
 
@@ -642,19 +693,27 @@ void Summary::add_timestep( int report_step,
         const auto& state_wells = state_group.getWells( report_step );
 
         std::vector< const data::Well* > sim_wells;
-        for( const auto& well : state_wells )
+        for( const auto& well : state_wells ) {
+            if( wells.wells.find( well.first ) == wells.wells.end() ) continue;
             sim_wells.push_back( &wells.at( well.first ) );
+        }
+
+        if( sim_wells.empty() )
+            sim_wells.push_back( &dummy_well );
 
         for( const auto& node : pair.second ) {
             auto val = group_keywords( static_cast< E >( node.kw ),
                                        node.node, this->prev_tstep,
+                                       duration,
                                        es.getUnits(), report_step,
                                        sim_wells, state_wells );
-            ecl_sum_tstep_set_from_node( tstep, node.node, val );
+            ecl_sum_tstep_set_from_node(
+                    tstep, node.node, val > 0 ? val : 0.0 );
         }
     }
 
     this->prev_tstep = tstep;
+    this->prev_time_elapsed = secs_elapsed;
 }
 
 void Summary::write() {
