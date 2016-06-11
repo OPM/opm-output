@@ -3,14 +3,10 @@
 source `dirname $0`/build-opm-output.sh
 
 declare -a upstreams
-upstreams=(opm-parser
-           opm-material
-           opm-core)
+upstreams=(opm-parser)
 
 declare -A upstreamRev
 upstreamRev[opm-parser]=master
-upstreamRev[opm-material]=master
-upstreamRev[opm-core]=master
 
 ERT_REVISION=master
 OPM_COMMON_REVISION=master

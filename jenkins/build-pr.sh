@@ -3,14 +3,10 @@
 source `dirname $0`/build-opm-output.sh
 
 declare -a upstreams
-upstreams=(opm-parser
-           opm-material
-           opm-core)
+upstreams=(opm-parser)
 
 declare -A upstreamRev
 upstreamRev[opm-parser]=master
-upstreamRev[opm-material]=master
-upstreamRev[opm-core]=master
 
 ERT_REVISION=master
 OPM_COMMON_REVISION=master
@@ -33,7 +29,7 @@ do
   fi
 done
 
-echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=${upstreamRev[opm-parser]} opm-material=${upstreamRev[opm-material]} opm-core=${upstreamRev[opm-core]} opm-output=$sha1"
+echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=${upstreamRev[opm-parser]} opm-output=$sha1"
 
 build_opm_output
 test $? -eq 0 || exit 1
@@ -47,11 +43,15 @@ fi
 
 # Downstream revisions
 declare -a downstreams
-downstreams=(opm-grid
+downstreams=(opm-material
+             opm-core
+             opm-grid
              opm-simulators
              opm-upscaling)
 
 declare -A downstreamRev
+downstreamRev[opm-material]=master
+downstreamRev[opm-core]=master
 downstreamRev[opm-grid]=master
 downstreamRev[opm-simulators]=master
 downstreamRev[opm-upscaling]=master
