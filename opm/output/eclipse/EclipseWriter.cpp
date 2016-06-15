@@ -481,7 +481,7 @@ class EclipseWriter::Impl {
 };
 
 EclipseWriter::Impl::Impl( std::shared_ptr< const EclipseState > eclipseState,
-                           int numCells,
+                           int numCellsArg,
                            const int* compressed_to_cart )
     : es( eclipseState )
     , outputDir( eclipseState->getIOConfig()->getOutputDir() )
@@ -490,9 +490,9 @@ EclipseWriter::Impl::Impl( std::shared_ptr< const EclipseState > eclipseState,
     , rft( outputDir.c_str(), baseName.c_str(),
            es->getIOConfig()->getFMTOUT(),
            compressed_to_cart,
-           numCells, es->getInputGrid()->getCartesianSize() )
+           numCellsArg, es->getInputGrid()->getCartesianSize() )
     , sim_start_time( es->getSchedule()->posixStartTime() )
-    , numCells( numCells )
+    , numCells( numCellsArg )
     , compressed_to_cartesian( compressed_to_cart )
     , gridToEclipseIdx( numCells, int(-1) )
     , output_enabled( eclipseState->getIOConfig()->getOutputEnabled() )
@@ -527,7 +527,7 @@ void EclipseWriter::writeInit( const NNC& nnc ) {
         auto data = props.getDoubleGridProperty("PERMX").getData();
         convertFromSiTo( data,
                          units,
-                         units.measure::permeability );
+                         UnitSystem::measure::permeability );
         restrictAndReorderToActiveCells(data, gridToEclipseIdx.size(), gridToEclipseIdx.data());
         fortio.writeKeyword("PERMX", data);
     }
@@ -535,7 +535,7 @@ void EclipseWriter::writeInit( const NNC& nnc ) {
         auto data = props.getDoubleGridProperty("PERMY").getData();
         convertFromSiTo( data,
                          units,
-                         units.measure::permeability );
+                         UnitSystem::measure::permeability );
         restrictAndReorderToActiveCells(data, gridToEclipseIdx.size(), gridToEclipseIdx.data());
         fortio.writeKeyword("PERMY", data);
     }
@@ -543,7 +543,7 @@ void EclipseWriter::writeInit( const NNC& nnc ) {
         auto data = props.getDoubleGridProperty("PERMZ").getData();
         convertFromSiTo( data,
                          units,
-                         units.measure::permeability );
+                         UnitSystem::measure::permeability );
         restrictAndReorderToActiveCells(data, gridToEclipseIdx.size(), gridToEclipseIdx.data());
         fortio.writeKeyword("PERMZ", data);
     }
@@ -555,7 +555,7 @@ void EclipseWriter::writeInit( const NNC& nnc ) {
         tran.push_back( nd.trans );
     }
 
-    convertFromSiTo( tran, units, units.measure::transmissibility );
+    convertFromSiTo( tran, units, UnitSystem::measure::transmissibility );
     fortio.writeKeyword("TRANNNC", tran);
 
 }
@@ -581,7 +581,7 @@ void EclipseWriter::writeTimeStep(int report_step,
     auto& pressure = cells[ dc::PRESSURE ];
     convertFromSiTo( pressure,
                      units,
-                     units.measure::pressure );
+                     UnitSystem::measure::pressure );
     restrictAndReorderToActiveCells(pressure, gridToEclipseIdx.size(), gridToEclipseIdx.data());
 
     if( cells.has( dc::SWAT ) ) {
@@ -598,7 +598,7 @@ void EclipseWriter::writeTimeStep(int report_step,
     IOConfigConstPtr ioConfig = this->impl->es->getIOConfigConst();
 
 
-    const auto days = units.from_si( units.measure::time, secs_elapsed );
+    const auto days = units.from_si( UnitSystem::measure::time, secs_elapsed );
     const auto& schedule = *es.getSchedule();
 
     // Write restart file
@@ -673,7 +673,7 @@ void EclipseWriter::writeTimeStep(int report_step,
         auto& temperature = cells[ dc::TEMP ];
         convertFromSiTo( temperature,
                          units,
-                         units.measure::temperature );
+                         UnitSystem::measure::temperature );
         sol.add( ERT::EclKW<float>("TEMP", temperature) );
 
 
