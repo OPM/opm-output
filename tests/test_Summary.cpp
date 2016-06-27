@@ -30,6 +30,8 @@
 #include <stdexcept>
 
 #include <ert/ecl/ecl_sum.h>
+#include <ert/util/util.h>
+#include <ert/util/TestArea.hpp>
 
 #include <opm/output/Wells.hpp>
 #include <opm/output/eclipse/Summary.hpp>
@@ -101,19 +103,17 @@ struct setup {
     SummaryConfig config;
     data::Wells wells;
     std::string name;
+    ERT::TestArea ta;
 
     setup( const std::string& fname ) :
         deck( Parser().parseFile( path, ParseContext() ) ),
         es( deck, ParseContext() ),
         config( *deck, es ),
         wells( result_wells() ),
-        name( fname )
-    {}
+        name( fname ),
+        ta( ERT::TestArea("test_summary") )
+    { }
 
-    ~setup() {
-        std::remove( ( name + ".UNSMRY" ).c_str() );
-        std::remove( ( name + ".SMSPEC" ).c_str() );
-    }
 };
 
 /*
@@ -122,6 +122,11 @@ struct setup {
  */
 BOOST_AUTO_TEST_CASE(well_keywords) {
     setup cfg( "test_Summary_well" );
+
+    // Force to run in a directory, to make sure the basename with
+    // leading path works.
+    util_make_path( "PATH" );
+    cfg.name = "PATH/CASE";
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
     writer.add_timestep( 0, 0 * day, cfg.es, cfg.wells );
