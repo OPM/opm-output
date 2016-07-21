@@ -8,6 +8,9 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/writeECLData.cpp
         opm/output/vtk/writeVtkData.cpp
+        opm/test_util/EclFilesComparator.cpp
+        opm/test_util/summaryRegressionTest.cpp
+        opm/test_util/summaryComparator.cpp
     )
 
 list (APPEND PUBLIC_HEADER_FILES
@@ -23,22 +26,27 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/writeECLData.hpp
         opm/output/vtk/writeVtkData.hpp
+        opm/test_util/EclFilesComparator.hpp
+        opm/test_util/summaryRegressionTest.hpp
+        opm/test_util/summaryComparator.hpp
     )
 
 list (APPEND TEST_SOURCE_FILES
+        tests/test_compareSummary.cpp
+        tests/test_EclFilesComparator.cpp
         tests/test_EclipseWriter.cpp
-        tests/test_RFT.cpp
-        tests/test_writenumwells.cpp
         tests/test_Restart.cpp
-        tests/test_Wells.cpp
+        tests/test_RFT.cpp
         tests/test_Summary.cpp
-)
+        tests/test_Wells.cpp
+        tests/test_writenumwells.cpp
+    )
 
 # originally generated with the command:
 # find tests -name '*.xml' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_DATA_FILES
-        tests/testBlackoilState3.DATA
-        tests/summary_deck.DATA
         tests/FIRST_SIM.DATA
+        tests/summary_deck.DATA
+        tests/testBlackoilState3.DATA
         tests/testRFT.DATA
-)
+    )
