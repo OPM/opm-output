@@ -38,17 +38,15 @@ list (APPEND PUBLIC_HEADER_FILES
     )
 
 list (APPEND EXAMPLE_SOURCE_FILES
-        test_util/initRegressionTest.cpp
-        test_util/restartRegressionTest.cpp
-        test_util/summaryRegressionTest.cpp
+        test_util/compareECL.cpp
+        test_util/compareSummary.cpp
     )
 
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
-        test_util/initRegressionTest.cpp
-        test_util/restartRegressionTest.cpp
-        test_util/summaryRegressionTest.cpp
+        test_util/compareECL.cpp
+        test_util/compareSummary.cpp
     )
 
 list (APPEND TEST_SOURCE_FILES
