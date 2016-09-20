@@ -2,6 +2,9 @@
 # vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
 
 list( APPEND MAIN_SOURCE_FILES
+        opm/test_util/summaryIntegrationTest.cpp
+        opm/test_util/summaryRegressionTest.cpp
+        opm/test_util/summaryComparator.cpp
         opm/output/eclipse/EclipseGridInspector.cpp
         opm/output/eclipse/EclipseReader.cpp
         opm/output/eclipse/EclipseWriter.cpp
@@ -17,6 +20,9 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/OutputWriter.hpp
         opm/output/Wells.hpp
         opm/output/Cells.hpp
+        opm/test_util/summaryRegressionTest.hpp
+        opm/test_util/summaryIntegrationTest.hpp
+        opm/test_util/summaryComparator.hpp
         opm/output/eclipse/CornerpointChopper.hpp
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
@@ -32,17 +38,15 @@ list (APPEND PUBLIC_HEADER_FILES
     )
 
 list (APPEND EXAMPLE_SOURCE_FILES
-        test_util/initRegressionTest.cpp
-        test_util/restartRegressionTest.cpp
-        test_util/summaryRegressionTest.cpp
+        test_util/compareECL.cpp
+        test_util/compareSummary.cpp
     )
 
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
-        test_util/initRegressionTest.cpp
-        test_util/restartRegressionTest.cpp
-        test_util/summaryRegressionTest.cpp
+        test_util/compareECL.cpp
+        test_util/compareSummary.cpp
     )
 
 list (APPEND TEST_SOURCE_FILES
