@@ -296,8 +296,6 @@ private:
 };
 
 
-const int inactive_index = -1;
-
 /// Convert OPM phase usage to ERT bitmask
 inline int ertPhaseMask( const TableManager& tm ) {
     return ( tm.hasPhase( Phase::PhaseEnum::WATER ) ? ECL_WATER_PHASE : 0 )
@@ -313,7 +311,6 @@ class RFT {
              const EclipseGrid& grid_);
 
         void writeTimeStep( std::vector< const Well* >,
-                            const EclipseGrid& grid,
                             int report_step,
                             time_t current_time,
                             double days,
@@ -347,7 +344,6 @@ inline ert_ecl_unit_enum to_ert_unit( UnitSystem::UnitType t ) {
 }
 
 void RFT::writeTimeStep( std::vector< const Well* > wells,
-                         const EclipseGrid& grid,
                          int report_step,
                          time_t current_time,
                          double days,
@@ -751,7 +747,6 @@ void EclipseWriter::writeTimeStep(int report_step,
 
     const auto unit_type = es.getDeckUnitSystem().getType();
     this->impl->rft.writeTimeStep( schedule.getWells( report_step ),
-                                   grid,
                                    report_step,
                                    current_posix_time,
                                    days,
