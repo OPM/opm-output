@@ -145,7 +145,21 @@ private:
     fd filename;
 };
 
+using restart_file = ERT::ert_unique_ptr< ecl_rst_file_type, ecl_rst_file_close >;
 
+restart_file open_rst( const char* filename,
+          bool first_restart,
+          bool unifout,
+          int report_step ) {
+
+    if( !unifout )
+        return restart_file{ ecl_rst_file_open_write( filename ) };
+
+    if( first_restart )
+        return restart_file{ ecl_rst_file_open_write_seek( filename, report_step ) };
+
+    return restart_file{ ecl_rst_file_open_append( filename ) };
+}
 
 class Restart {
 public:
@@ -175,16 +189,17 @@ public:
     Restart(const std::string& outputDir,
             const std::string& baseName,
             int writeStepIdx,
-            const IOConfig& ioConfig ) :
+            const IOConfig& ioConfig,
+            bool first_restart ) :
         filename( outputDir,
                 baseName,
                 ioConfig.getUNIFOUT() ? ECL_UNIFIED_RESTART_FILE : ECL_RESTART_FILE,
                 writeStepIdx,
                 ioConfig.getFMTOUT() ),
-        rst_file(
-                ( writeStepIdx > 0 && ioConfig.getUNIFOUT() )
-                ? ecl_rst_file_open_append( filename.get() )
-                : ecl_rst_file_open_write( filename.get() ) )
+        rst_file( open_rst( filename.get(),
+                            first_restart,
+                            ioConfig.getUNIFOUT(),
+                            writeStepIdx ) )
     {}
 
     template< typename T >
@@ -245,7 +260,7 @@ public:
 
 private:
     FileName filename;
-    ERT::ert_unique_ptr< ecl_rst_file_type, ecl_rst_file_close > rst_file;
+    restart_file rst_file;
 };
 
 /**
@@ -295,7 +310,6 @@ private:
     Restart& restart;
 };
 
-
 /// Convert OPM phase usage to ERT bitmask
 inline int ertPhaseMask( const TableManager& tm ) {
     return ( tm.hasPhase( Phase::PhaseEnum::WATER ) ? ECL_WATER_PHASE : 0 )
@@ -307,10 +321,10 @@ class RFT {
     public:
         RFT( const char* output_dir,
              const char* basename,
-             bool format,
-             const EclipseGrid& grid_);
+             bool format );
 
         void writeTimeStep( std::vector< const Well* >,
+                            const EclipseGrid& grid,
                             int report_step,
                             time_t current_time,
                             double days,
@@ -320,18 +334,14 @@ class RFT {
                             const std::vector< double >& sgas );
     private:
         ERT::FortIO fortio;
-        const EclipseGrid& grid;
 };
 
 
 RFT::RFT( const char* output_dir,
           const char* basename,
-          bool format,
-          const EclipseGrid& grid_ ) :
-    fortio(FileName( output_dir, basename, ECL_RFT_FILE, format ).get(),std::ios_base::out),
-    grid( grid_ )
-{
-}
+          bool format ) :
+    fortio(FileName( output_dir, basename, ECL_RFT_FILE, format ).get(),std::ios_base::out)
+{}
 
 inline ert_ecl_unit_enum to_ert_unit( UnitSystem::UnitType t ) {
     switch ( t ) {
@@ -344,6 +354,7 @@ inline ert_ecl_unit_enum to_ert_unit( UnitSystem::UnitType t ) {
 }
 
 void RFT::writeTimeStep( std::vector< const Well* > wells,
+                         const EclipseGrid& grid,
                          int report_step,
                          time_t current_time,
                          double days,
@@ -411,6 +422,7 @@ class EclipseWriter::Impl {
         std::array< int, 3 > cartesianSize;
         bool output_enabled;
         int ert_phase_mask;
+        bool first_restart = true;
 };
 
 EclipseWriter::Impl::Impl( std::shared_ptr< const EclipseState > eclipseState,
@@ -420,9 +432,7 @@ EclipseWriter::Impl::Impl( std::shared_ptr< const EclipseState > eclipseState,
     , outputDir( eclipseState->getIOConfig()->getOutputDir() )
     , baseName( uppercase( eclipseState->getIOConfig()->getBaseName() ) )
     , summary( *eclipseState, eclipseState->getSummaryConfig() )
-    , rft( outputDir.c_str(), baseName.c_str(),
-           es->getIOConfig()->getFMTOUT(),
-           grid)
+    , rft( outputDir.c_str(), baseName.c_str(), es->getIOConfig()->getFMTOUT() )
     , sim_start_time( es->getSchedule()->posixStartTime() )
     , output_enabled( eclipseState->getIOConfig()->getOutputEnabled() )
     , ert_phase_mask( ertPhaseMask( eclipseState->getTableManager() ) )
@@ -436,9 +446,7 @@ EclipseWriter::Impl::Impl( std::shared_ptr< const EclipseState > eclipseState,
     , outputDir( eclipseState->getIOConfig()->getOutputDir() )
     , baseName( uppercase( eclipseState->getIOConfig()->getBaseName() ) )
     , summary( *eclipseState, eclipseState->getSummaryConfig() )
-    , rft( outputDir.c_str(), baseName.c_str(),
-           es->getIOConfig()->getFMTOUT(),
-           grid)
+    , rft( outputDir.c_str(), baseName.c_str(), es->getIOConfig()->getFMTOUT() )
     , sim_start_time( es->getSchedule()->posixStartTime() )
     , output_enabled( eclipseState->getIOConfig()->getOutputEnabled() )
     , ert_phase_mask( ertPhaseMask( eclipseState->getTableManager() ) )
@@ -656,7 +664,10 @@ void EclipseWriter::writeTimeStep(int report_step,
         Restart restartHandle( this->impl->outputDir,
                                this->impl->baseName,
                                report_step,
-                               es.cfg().io() );
+                               es.cfg().io(),
+                               this->impl->first_restart );
+
+        this->impl->first_restart = false;
 
         for (size_t iwell = 0; iwell < wells_ptr.size(); ++iwell) {
             const auto& well = *wells_ptr[iwell];
@@ -747,6 +758,7 @@ void EclipseWriter::writeTimeStep(int report_step,
 
     const auto unit_type = es.getDeckUnitSystem().getType();
     this->impl->rft.writeTimeStep( schedule.getWells( report_step ),
+                                   grid,
                                    report_step,
                                    current_posix_time,
                                    days,
