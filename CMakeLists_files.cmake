@@ -11,6 +11,7 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/writeECLData.cpp
         opm/output/vtk/writeVtkData.cpp
+        opm/output/data/CellDataContainer.cpp
         opm/test_util/EclFilesComparator.cpp
         opm/test_util/summaryRegressionTest.cpp
         opm/test_util/summaryComparator.cpp
@@ -31,6 +32,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/writeECLData.hpp
+        opm/output/data/CellDataContainer.hpp
         opm/output/vtk/writeVtkData.hpp
         opm/test_util/EclFilesComparator.hpp
         opm/test_util/summaryRegressionTest.hpp
@@ -58,6 +60,7 @@ list (APPEND TEST_SOURCE_FILES
         tests/test_Summary.cpp
         tests/test_Wells.cpp
         tests/test_writenumwells.cpp
+        tests/test_CellDataContainer.cpp
     )
 
 # originally generated with the command:
