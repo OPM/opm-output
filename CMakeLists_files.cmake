@@ -18,8 +18,8 @@ list( APPEND MAIN_SOURCE_FILES
 
 list (APPEND PUBLIC_HEADER_FILES
         opm/output/OutputWriter.hpp
-        opm/output/Wells.hpp
-        opm/output/Cells.hpp
+        opm/output/data/Wells.hpp
+        opm/output/data/Cells.hpp
         opm/test_util/summaryRegressionTest.hpp
         opm/test_util/summaryIntegrationTest.hpp
         opm/test_util/summaryComparator.hpp
