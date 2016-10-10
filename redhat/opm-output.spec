@@ -48,6 +48,15 @@ BuildArch:	noarch
 %description doc
 This package contains the documentation files for opm-output
 
+%package bin
+Summary:        Applications in opm-output
+Group:          Scientific
+Requires:       %{name} = %{version}
+Requires:       libopm-output1 = %{version}
+
+%description bin
+This package contains the applications for opm-output
+
 %prep
 %setup -q -n %{name}-release-%{version}-%{tag}
 
@@ -85,3 +94,6 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/*
 %{_includedir}/*
 %{_datadir}/cmake/*
+
+%files bin
+%{_bindir}/*

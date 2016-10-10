@@ -34,6 +34,16 @@ Provides: libopm-output
 Description: opm output library
  opm-output contains output methods for opm simulators.
 
+Package: libopm-output1-bin
+Section: science
+Pre-Depends: ${misc:Pre-Depends}, multiarch-support
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Provides: libopm-output-bin
+Description: OPM output library -- applications
+ opm-output contains output methods for opm simulators.
+
 Package: libopm-output1-doc
 Section: doc
 Architecture: all
