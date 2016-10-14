@@ -24,7 +24,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/test_util/summaryRegressionTest.hpp
         opm/test_util/summaryIntegrationTest.hpp
         opm/test_util/summaryComparator.hpp
-        opm/output/eclipse/CornerpointChopper.hpp
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
         opm/output/eclipse/EclipseReader.hpp
