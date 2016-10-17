@@ -33,8 +33,8 @@
 #include <ert/util/util.h>
 #include <ert/util/TestArea.hpp>
 
-#include <opm/output/Wells.hpp>
-#include <opm/output/Cells.hpp>
+#include <opm/output/data/Wells.hpp>
+#include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -57,17 +57,16 @@ static const int day = 24 * 60 * 60;
 
 
 static data::Solution make_solution( const EclipseGrid& grid ) {
-    using ds = data::Solution::key;
-    data::Solution sol;
     int numCells = grid.getCartesianSize();
+    data::Solution sol = {
+        {"TEMP" , { UnitSystem::measure::temperature, std::vector<double>( numCells ), data::TargetType::RESTART_SOLUTION} },
+        {"SWAT" , { UnitSystem::measure::identity,    std::vector<double>( numCells ), data::TargetType::RESTART_SOLUTION} },
+        {"SGAS" , { UnitSystem::measure::identity,    std::vector<double>( numCells ), data::TargetType::RESTART_SOLUTION} }};
 
-    for( auto k : { ds::TEMP, ds::SWAT, ds::SGAS } ) {
-        sol.insert( k, std::vector< double >( numCells ) );
-    }
 
-    sol[ ds::TEMP ].assign( numCells, 7.0 );
-    sol[ ds::SWAT ].assign( numCells, 8.0 );
-    sol[ ds::SGAS ].assign( numCells, 9.0 );
+    sol.data("TEMP").assign( numCells, 7.0 );
+    sol.data("SWAT").assign( numCells, 8.0 );
+    sol.data("SGAS").assign( numCells, 9.0 );
 
 
     {
@@ -80,7 +79,7 @@ static data::Solution make_solution( const EclipseGrid& grid ) {
                 }
             }
         }
-        sol.insert( ds::PRESSURE , pres);
+        sol.insert( "PRESSURE" , UnitSystem::measure::pressure , pres, data::TargetType::RESTART_SOLUTION);
     }
     return sol;
 }

@@ -27,8 +27,8 @@
 
 #include <opm/output/eclipse/EclipseWriter.hpp>
 #include <opm/output/eclipse/EclipseReader.hpp>
-#include <opm/output/Cells.hpp>
-#include <opm/output/Wells.hpp>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Wells.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
@@ -197,23 +197,28 @@ data::Wells mkWells() {
 }
 
 data::Solution mkSolution( int numCells ) {
-    using ds = data::Solution::key;
-    data::Solution sol;
 
-    for( auto k : { ds::PRESSURE, ds::TEMP, ds::SWAT, ds::SGAS } ) {
-        sol.insert( k, std::vector< double >( numCells ) );
-    }
+    using measure = UnitSystem::measure;
+    using namespace data;
 
-    sol[ ds::PRESSURE ].assign( numCells, 6.0 );
-    sol[ ds::TEMP ].assign( numCells, 7.0 );
-    sol[ ds::SWAT ].assign( numCells, 8.0 );
-    sol[ ds::SGAS ].assign( numCells, 9.0 );
+    data::Solution sol = {
+        { "PRESSURE", { measure::pressure, std::vector<double>( numCells ), TargetType::RESTART_SOLUTION } },
+        { "TEMP", { measure::temperature,  std::vector<double>( numCells ), TargetType::RESTART_SOLUTION } },
+        { "SWAT", { measure::identity,     std::vector<double>( numCells ), TargetType::RESTART_SOLUTION } },
+        { "SGAS", { measure::identity,     std::vector<double>( numCells ), TargetType::RESTART_SOLUTION } }
+    };
+
+
+    sol.data("PRESSURE").assign( numCells, 6.0 );
+    sol.data("TEMP").assign( numCells, 7.0 );
+    sol.data("SWAT").assign( numCells, 8.0 );
+    sol.data("SGAS").assign( numCells, 9.0 );
 
     fun::iota rsi( 300, 300 + numCells );
     fun::iota rvi( 400, 400 + numCells );
 
-    sol.insert( ds::RS, { rsi.begin(), rsi.end() } );
-    sol.insert( ds::RV, { rvi.begin(), rvi.end() } );
+    sol.insert( "RS", measure::identity, { rsi.begin(), rsi.end() } , TargetType::RESTART_SOLUTION );
+    sol.insert( "RV", measure::identity, { rvi.begin(), rvi.end() } , TargetType::RESTART_SOLUTION );
 
     return sol;
 }
@@ -257,14 +262,13 @@ std::pair< data::Solution, data::Wells > second_sim() {
 void compare( std::pair< data::Solution, data::Wells > fst,
               std::pair< data::Solution, data::Wells > snd ) {
 
-    using ds = data::Solution::key;
-    for( auto key : { ds::PRESSURE, ds::TEMP, ds::SWAT, ds::SGAS,
-                      ds::RS, ds::RV } ) {
+    for( auto key : { "PRESSURE", "TEMP", "SWAT", "SGAS",
+                      "RS", "RV" } ) {
 
-        auto first = fst.first[ key ].begin();
-        auto second = snd.first[ key ].begin();
+        auto first = fst.first.data( key ).begin();
+        auto second = snd.first.data( key ).begin();
 
-        for( ; first != fst.first[ key ].end(); ++first, ++second )
+        for( ; first != fst.first.data( key ).end(); ++first, ++second )
             BOOST_CHECK_CLOSE( *first, *second, 0.00001 );
     }
 

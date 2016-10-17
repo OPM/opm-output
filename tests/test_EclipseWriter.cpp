@@ -26,7 +26,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/output/eclipse/EclipseWriter.hpp>
-#include <opm/output/Cells.hpp>
+#include <opm/output/data/Cells.hpp>
 
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -72,13 +72,13 @@ data::Solution createBlackoilState( int timeStepIdx, int numCells ) {
     }
 
     data::Solution solution;
-    using ds = data::Solution::key;
 
-    solution.insert( ds::PRESSURE, pressure );
-    solution.insert( ds::SWAT, swat );
-    solution.insert( ds::SGAS, sgas );
-    solution.insert( ds::RS, rs );
-    solution.insert( ds::RV, rv );
+    solution.insert( "PRESSURE" , UnitSystem::measure::pressure , pressure, data::TargetType::RESTART_SOLUTION );
+    solution.insert( "SWAT" , UnitSystem::measure::identity , swat, data::TargetType::RESTART_SOLUTION );
+    solution.insert( "SGAS" , UnitSystem::measure::identity , sgas, data::TargetType::RESTART_SOLUTION );
+    solution.insert( "RS" , UnitSystem::measure::identity , rs, data::TargetType::RESTART_SOLUTION );
+    solution.insert( "RV" , UnitSystem::measure::identity , rv, data::TargetType::RESTART_SOLUTION );
+
     return solution;
 }
 
@@ -145,7 +145,7 @@ void checkEgridFile( const EclipseGrid& eclGrid ) {
     fortio_fclose(egridFile);
 }
 
-void checkInitFile( const Deck& deck, const std::vector<data::CellData>& simProps) {
+void checkInitFile( const Deck& deck, const data::Solution& simProps) {
     // use ERT directly to inspect the INIT file produced by EclipseWriter
     ERT::ert_unique_ptr<ecl_file_type , ecl_file_close> initFile(ecl_file_open( "FOO.INIT" , 0 ));
 
@@ -176,13 +176,11 @@ void checkInitFile( const Deck& deck, const std::vector<data::CellData>& simProp
     BOOST_CHECK( ecl_file_has_kw( initFile.get() , "SATNUM" ));
 
     for (const auto& prop : simProps) {
-        BOOST_CHECK( ecl_file_has_kw( initFile.get() , prop.name.c_str()) );
+        BOOST_CHECK( ecl_file_has_kw( initFile.get() , prop.first.c_str()) );
     }
 }
 
 void checkRestartFile( int timeStepIdx ) {
-    using ds = data::Solution::key;
-
     for (int i = 1; i <= timeStepIdx; ++i) {
         auto sol = createBlackoilState( i, 3 * 3 * 3 );
 
@@ -201,20 +199,20 @@ void checkRestartFile( int timeStepIdx ) {
 
             if (keywordName == "PRESSURE") {
                 const auto resultData = getErtData< float >( eclKeyword );
-                for( auto& x : sol[ ds::PRESSURE ] )
+                for( auto& x : sol.data("PRESSURE") )
                     x /= Metric::Pressure;
 
-                compareErtData( sol[ ds::PRESSURE ], resultData, 1e-4 );
+                compareErtData( sol.data("PRESSURE"), resultData, 1e-4 );
             }
 
             if (keywordName == "SWAT") {
                 const auto resultData = getErtData< float >( eclKeyword );
-                compareErtData(sol[ ds::SWAT ], resultData, 1e-4);
+                compareErtData(sol.data("SWAT"), resultData, 1e-4);
             }
 
             if (keywordName == "SGAS") {
                 const auto resultData = getErtData< float >( eclKeyword );
-                compareErtData( sol[ ds::SGAS ], resultData, 1e-4 );
+                compareErtData( sol.data("SGAS"), resultData, 1e-4 );
             }
 
             if (keywordName == "KRO")
@@ -281,15 +279,18 @@ BOOST_AUTO_TEST_CASE(EclipseWriterIntegration) {
 
         EclipseWriter eclWriter( es, eclGrid );
 
+        using measure = UnitSystem::measure;
+        using TargetType = data::TargetType;
         auto start_time = ecl_util_make_date( 10, 10, 2008 );
         std::vector<double> tranx(3*3*3);
         std::vector<double> trany(3*3*3);
         std::vector<double> tranz(3*3*3);
-        std::vector<data::CellData> eGridProps{
-            {"TRANX" , UnitSystem::measure::transmissibility, tranx},
-            {"TRANY" , UnitSystem::measure::transmissibility, trany},
-            {"TRANZ" , UnitSystem::measure::transmissibility, tranz}
+        data::Solution eGridProps {
+            { "TRANX", { measure::transmissibility, tranx, TargetType::INIT } },
+            { "TRANY", { measure::transmissibility, trany, TargetType::INIT } },
+            { "TRANZ", { measure::transmissibility, tranz, TargetType::INIT } },
         };
+
 
         eclWriter.writeInitAndEgrid( );
         eclWriter.writeInitAndEgrid( eGridProps );
@@ -297,17 +298,18 @@ BOOST_AUTO_TEST_CASE(EclipseWriterIntegration) {
         data::Wells wells;
 
         for( int i = first; i < last; ++i ) {
-            std::vector<data::CellData> timesStepProps {
-                {"KRO" , UnitSystem::measure::identity , std::vector<double>(3*3*3 , i)},
-                {"KRG" , UnitSystem::measure::identity , std::vector<double>(3*3*3 , i*10)}};
+            data::Solution sol = createBlackoilState( i, 3 * 3 * 3 );
+            sol.insert("KRO", measure::identity , std::vector<double>(3*3*3 , i), TargetType::RESTART_AUXILLARY);
+            sol.insert("KRG", measure::identity , std::vector<double>(3*3*3 , i*10), TargetType::RESTART_AUXILLARY);
+
 
             auto first_step = ecl_util_make_date( 10 + i, 11, 2008 );
             eclWriter.writeTimeStep( i,
                     false,
                     first_step - start_time,
-                    createBlackoilState( i, 3 * 3 * 3 ),
-                    wells,
-                    timesStepProps);
+                    sol,
+                    wells);
+
 
             checkRestartFile( i );
         }
