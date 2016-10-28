@@ -17,7 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <opm/output/eclipse/Summary.hpp>
+#include <numeric>
+
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
@@ -29,6 +30,9 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/output/eclipse/Summary.hpp>
+#include <opm/output/eclipse/RegionCache.hpp>
 
 /*
  * This class takes simulator state and parser-provided information and
@@ -106,6 +110,22 @@ struct quantity {
         if( rhs.value == 0 ) return { 0.0, res_unit };
         return { this->value / rhs.value, res_unit };
     }
+
+    quantity operator/( double divisor ) const {
+        if( divisor == 0 ) return { 0.0, this->unit };
+        return { this->value / divisor , this->unit };
+    }
+
+    quantity& operator/=( double divisor ) {
+        if( divisor == 0 )
+            this->value = 0;
+        else
+            this->value /= divisor;
+
+        return *this;
+    }
+
+
     quantity operator-( const quantity& rhs) const {
         return { this->value - rhs.value, this->unit };
     }
@@ -125,8 +145,8 @@ struct fn_args {
     int  num;
     const data::Wells& wells;
     const data::Solution& state;
-    const std::unordered_map<int , std::vector<size_t>>& regionCells;
-    const GridDims& grid;
+    const out::RegionCache& regionCache;
+    const EclipseGrid& grid;
 };
 
 /* Since there are several enums in opm scattered about more-or-less
@@ -166,19 +186,22 @@ inline quantity rate( const fn_args& args ) {
 template< rt phase, bool injection = true >
 inline quantity crate( const fn_args& args ) {
     const quantity zero = { 0, rate_unit< phase >() };
-    const size_t index = args.num;
-
+    // The args.num value is the literal value which will go to the
+    // NUMS array in the eclispe SMSPEC file; the values in this array
+    // are offset 1 - whereas we need to use this index here to look
+    // up a completion with offset 0.
+    const auto global_index = args.num - 1;
+    const auto active_index = args.grid.activeIndex( global_index );
     if( args.schedule_wells.empty() ) return zero;
 
     const auto& name = args.schedule_wells.front()->name();
     if( args.wells.count( name ) == 0 ) return zero;
 
     const auto& well = args.wells.at( name );
-
     const auto& completion = std::find_if( well.completions.begin(),
                                            well.completions.end(),
                                            [=]( const data::Completion& c ) {
-                                                return c.index == index;
+                                                return c.index == active_index;
                                            } );
 
     if( completion == well.completions.end() ) return zero;
@@ -282,23 +305,98 @@ inline quantity duration( const fn_args& args ) {
     return { args.duration, measure::time };
 }
 
-quantity rpr(const fn_args& args) {
-    const auto& pair = args.regionCells.find( args.num );
-    if (pair == args.regionCells.end())
-        return { 0.0 , measure::pressure };
+template<rt phase , bool injection>
+quantity region_rate( const fn_args& args ) {
+    double sum = 0;
+    const auto& well_completions = args.regionCache.completions( args.num );
+    for (const auto& pair : well_completions) {
+        double rate = args.wells.get( pair.first , pair.second , phase );
 
-    double RPR = 0;
+        // We are asking for the production rate in an injector - or
+        // opposite. We just clamp to zero.
+        if ((rate > 0) != injection)
+            rate = 0;
 
-    const std::vector<double>& pressure = args.state.data( "PRESSURE" );
-    const auto& cells = pair->second;
+        sum += rate;
+    }
+
+    if( injection )
+        return { sum, rate_unit< phase >() };
+    else
+        return { -sum, rate_unit< phase >() };
+}
+
+template<rt phase>
+quantity region_production(const fn_args& args) {
+    return region_rate<phase , false>(args);
+}
+
+template<rt phase>
+quantity region_injection(const fn_args& args) {
+    return region_rate<phase , true>(args);
+}
+
+
+quantity region_sum( const fn_args& args , const std::string& keyword , UnitSystem::measure unit) {
+    const auto& cells = args.regionCache.cells( args.num );
+    if (cells.empty())
+        return { 0.0 , unit };
+
+    double sum = 0;
+
+    const std::vector<double>& sim_value = args.state.data( keyword);
 
     for (auto cell_index : cells)
-        RPR += pressure[cell_index];
+        sum += sim_value[cell_index];
 
-    RPR /= cells.size();
-
-    return { RPR , measure::pressure };
+    return { sum , unit };
 }
+
+
+quantity rpr(const fn_args& args) {
+    quantity p = region_sum( args , "PRESSURE" ,measure::pressure );
+    const auto& cells = args.regionCache.cells( args.num );
+    if (cells.size() > 0)
+        p /= cells.size();
+    return p;
+}
+
+quantity roip(const fn_args& args) {
+    return region_sum( args , "OIP", measure::volume );
+}
+
+quantity rgip(const fn_args& args) {
+    return region_sum( args , "GIP", measure::volume );
+}
+
+quantity roipl(const fn_args& args) {
+    return region_sum( args , "OIPL", measure::volume );
+}
+
+quantity roipg(const fn_args& args) {
+    return region_sum( args , "OIPG", measure::volume );
+}
+
+quantity fgip( const fn_args& args ) {
+    quantity zero { 0.0, measure::volume };
+    if( !args.state.has( "GIP" ) )
+        return zero;
+
+    const auto& cells = args.state.at( "GIP" ).data;
+    return { std::accumulate( cells.begin(), cells.end(), 0.0 ),
+             measure::volume };
+}
+
+quantity foip( const fn_args& args ) {
+    if( !args.state.has( "OIP" ) )
+        return { 0.0, measure::volume };
+
+    const auto& cells = args.state.at( "OIP" ).data;
+    return { std::accumulate( cells.begin(), cells.end(), 0.0 ),
+             measure::volume };
+}
+
+
 
 template< typename F, typename G >
 auto mul( F f, G g ) -> bin_op< F, G, std::multiplies< quantity > >
@@ -418,6 +516,11 @@ static const std::unordered_map< std::string, ofun > funs = {
     { "GWIRH", injection_history< Phase::WATER > },
     { "GOIRH", injection_history< Phase::OIL > },
     { "GGIRH", injection_history< Phase::GAS > },
+    { "GGORH", div( production_history< Phase::GAS >,
+                    production_history< Phase::OIL > ) },
+    { "GWCTH", div( production_history< Phase::WATER >,
+                    sum( production_history< Phase::WATER >,
+                         production_history< Phase::OIL > ) ) },
 
     { "GWPTH", mul( production_history< Phase::WATER >, duration ) },
     { "GOPTH", mul( production_history< Phase::OIL >, duration ) },
@@ -470,6 +573,9 @@ static const std::unordered_map< std::string, ofun > funs = {
     { "FLIT", mul( sum( injerate< rt::wat >, injerate< rt::oil > ),
                    duration ) },
 
+    { "FOIP", foip },
+    { "FGIP", fgip },
+
     { "FWPRH", production_history< Phase::WATER > },
     { "FOPRH", production_history< Phase::OIL > },
     { "FGPRH", production_history< Phase::GAS > },
@@ -505,7 +611,18 @@ static const std::unordered_map< std::string, ofun > funs = {
 
     /* Region properties */
     { "RPR" , rpr},
+    { "ROIP" , roip},
+    { "ROIPL" , roipl},
+    { "ROIPG" , roipg},
+    { "RGIP"  , rgip},
+    { "ROPR"  , region_production<rt::oil>},
+    { "RGPR"  , region_production<rt::gas>},
+    { "RWPR"  , region_production<rt::wat>},
+    { "ROPT"  , mul( region_production<rt::oil>, duration )},
+    { "RGPT"  , mul( region_production<rt::gas>, duration )},
+    { "RWPT"  , mul( region_production<rt::wat>, duration )},
 };
+
 
 inline std::vector< const Well* > find_wells( const Schedule& schedule,
                                               const smspec_node_type* node,
@@ -553,8 +670,8 @@ Summary::Summary( const EclipseState& st, const SummaryConfig& sum ) :
 {}
 
 Summary::Summary( const EclipseState& st,
-                const SummaryConfig& sum,
-                const std::string& basename ) :
+                  const SummaryConfig& sum,
+                  const std::string& basename ) :
     Summary( st, sum, basename.c_str() )
 {}
 
@@ -586,15 +703,13 @@ Summary::Summary( const EclipseState& st,
         /* get unit strings by calling each function with dummy input */
         const auto handle = funs.find( keyword )->second;
         const std::vector< const Well* > dummy_wells;
-        const std::unordered_map<int,std::vector<size_t>> dummy_cells;
-        GridDims dummy_grid(1,1,1);
-        const fn_args no_args{ dummy_wells, 0, 0, 0, {} , {}, dummy_cells , dummy_grid };
+        EclipseGrid dummy_grid(1,1,1);
+        const fn_args no_args{ dummy_wells, 0, 0, 0, {} , {}, {} , dummy_grid };
         const auto val = handle( no_args );
         const auto* unit = st.getUnits().name( val.unit );
 
         auto* nodeptr = ecl_sum_add_var( this->ecl_sum.get(), keyword,
                                          node.wgname(), node.num(), unit, 0 );
-
         this->handlers->handlers.emplace_back( nodeptr, handle );
     }
 }
@@ -603,7 +718,7 @@ void Summary::add_timestep( int report_step,
                             double secs_elapsed,
                             const EclipseGrid& grid,
                             const EclipseState& es,
-                            const std::unordered_map<int, std::vector<size_t>>& regionCells,
+                            const RegionCache& regionCache,
                             const data::Wells& wells ,
                             const data::Solution& state) {
 
@@ -618,7 +733,7 @@ void Summary::add_timestep( int report_step,
         const auto* genkey = smspec_node_get_gen_key1( f.first );
 
         const auto schedule_wells = find_wells( schedule, f.first, timestep );
-        const auto val = f.second( { schedule_wells, duration, timestep, num, wells , state , regionCells , grid} );
+        const auto val = f.second( { schedule_wells, duration, timestep, num, wells , state , regionCache , grid} );
 
         const auto unit_applied_val = es.getUnits().from_si( val.unit, val.value );
         const auto res = smspec_node_is_total( f.first ) && prev_tstep

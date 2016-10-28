@@ -71,15 +71,29 @@ static data::Solution make_solution( const EclipseGrid& grid ) {
 
     {
         std::vector<double> pres(numCells);
+        std::vector<double> roip(numCells);
+        std::vector<double> roipl(numCells);
+        std::vector<double> roipg(numCells);
+        std::vector<double> rgip(numCells);
+
         for (size_t k=0; k < grid.getNZ(); k++) {
             for (size_t j=0; j < grid.getNY(); j++) {
                 for (size_t i=0; i < grid.getNX(); i++) {
                     size_t g = grid.getNX()*grid.getNY()*k + j * grid.getNX() + i;
                     pres[g] = 1.0*(k + 1);
+                    roip[g] = 2.0*(k + 1);
+                    roipl[g] = roip[g] - 1;
+                    roipg[g] = roip[g] + 1;
+                    rgip[g] = 2.1*(k + 1);
                 }
             }
         }
-        sol.insert( "PRESSURE" , UnitSystem::measure::pressure , pres, data::TargetType::RESTART_SOLUTION);
+
+        sol.insert( "PRESSURE", UnitSystem::measure::pressure , pres , data::TargetType::RESTART_SOLUTION);
+        sol.insert( "OIP"     , UnitSystem::measure::volume   , roip , data::TargetType::RESTART_AUXILLARY);
+        sol.insert( "OIPL"    , UnitSystem::measure::volume   , roipl, data::TargetType::RESTART_AUXILLARY);
+        sol.insert( "OIPG"    , UnitSystem::measure::volume   , roipg, data::TargetType::RESTART_AUXILLARY);
+        sol.insert( "GIP"     , UnitSystem::measure::volume   , rgip , data::TargetType::RESTART_AUXILLARY);
     }
     return sol;
 }
@@ -139,15 +153,30 @@ static data::Wells result_wells() {
     crates3.set( rt::gas, 300.2 / day );
     crates3.set( rt::solvent, 300.3 / day );
 
-    data::Completion comp1 { 1, crates1, 1.9, 123.4 };
-    data::Completion comp2 { 1, crates2, 1.10, 123.4 };
-    data::Completion comp3 { 3, crates3, 1.11, 123.4 };
+    /*
+      The active index assigned to the completion must be manually
+      syncronized with the active index in the COMPDAT keyword in the
+      input deck.
+    */
+    data::Completion well1_comp1 { 0  , crates1, 1.9 , 123.4};
+    data::Completion well2_comp1 { 1  , crates2, 1.10 , 123.4};
+    data::Completion well2_comp2 { 101, crates3, 1.11 , 123.4};
+    data::Completion well3_comp1 { 2  , crates3, 1.11 , 123.4};
 
-    data::Well well1 { rates1, 0.1 * ps, 0.2 * ps, 0.3 * ps, 1, { comp1 } };
-    data::Well well2 { rates2, 1.1 * ps, 1.2 * ps, 1.3 * ps, 2, { comp2 } };
-    data::Well well3 { rates3, 2.1 * ps, 2.2 * ps, 2.3 * ps, 3, { comp3 } };
+    /*
+      The completions
+    */
+    data::Well well1 { rates1, 0.1 * ps, 0.2 * ps, 0.3 * ps, 1, { {well1_comp1} } };
+    data::Well well2 { rates2, 1.1 * ps, 1.2 * ps, 1.3 * ps, 2, { {well2_comp1 , well2_comp2} } };
+    data::Well well3 { rates3, 2.1 * ps, 2.2 * ps, 2.3 * ps, 3, { {well3_comp1} } };
 
-    return { { "W_1", well1 }, { "W_2", well2 }, { "W_3", well3 } };
+    data::Wells wellrates;
+
+    wellrates["W_1"] = well1;
+    wellrates["W_2"] = well2;
+    wellrates["W_3"] = well3;
+
+    return wellrates;
 }
 
 ERT::ert_unique_ptr< ecl_sum_type, ecl_sum_free > readsum( const std::string& base ) {
@@ -161,6 +190,7 @@ struct setup {
     EclipseState es;
     SummaryConfig config;
     const EclipseGrid& grid;
+    const out::RegionCache regionCache;
     data::Wells wells;
     std::string name;
     ERT::TestArea ta;
@@ -175,20 +205,17 @@ struct setup {
         es( deck, ParseContext() ),
         config( deck, es, parseContext ),
         grid( es.getInputGrid() ),
+        regionCache( es , grid ),
         wells( result_wells() ),
         name( fname ),
         ta( ERT::TestArea("test_summary") ),
         solution( make_solution( es.getInputGrid() ) )
     {
-        const auto& properties = es.get3DProperties();
-        const auto& fipnum = properties.getIntGridProperty("FIPNUM");
-        const auto& region_values = properties.getRegions( "FIPNUM" );
-
-        for (auto region_id : region_values)
-            cells.emplace( region_id , fipnum.cellsEqual( region_id , grid ));
+        solution = make_solution( es.getInputGrid());
     }
 
 };
+
 
 /*
  * Tests works by reading the Deck, write the summary output, then immediately
@@ -203,9 +230,9 @@ BOOST_AUTO_TEST_CASE(well_keywords) {
     cfg.name = "PATH/CASE";
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -339,9 +366,9 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     setup cfg( "test_Summary_group" );
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -406,20 +433,26 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     BOOST_CHECK_CLOSE( gwcut1, ecl_sum_get_group_var( resp, 1, "G_1", "GWCT" ), 1e-5 );
     BOOST_CHECK_CLOSE( gwcut2, ecl_sum_get_group_var( resp, 1, "G_2", "GWCT" ), 1e-5 );
 
+    BOOST_CHECK_CLOSE( gwcut1, ecl_sum_get_group_var( resp, 1, "G_1", "GWCTH" ), 1e-5 );
+    BOOST_CHECK_CLOSE( gwcut2, ecl_sum_get_group_var( resp, 1, "G_2", "GWCTH" ), 1e-5 );
+
     /* ggor - gas-oil ratio */
     const double ggor1 = (10.2 + 20.2) / (10.1 + 20.1);
     const double ggor2 = 0;
     BOOST_CHECK_CLOSE( ggor1, ecl_sum_get_group_var( resp, 1, "G_1", "GGOR" ), 1e-5 );
     BOOST_CHECK_CLOSE( ggor2, ecl_sum_get_group_var( resp, 1, "G_2", "GGOR" ), 1e-5 );
+
+    BOOST_CHECK_CLOSE( ggor1, ecl_sum_get_group_var( resp, 1, "G_1", "GGORH" ), 1e-5 );
+    BOOST_CHECK_CLOSE( ggor2, ecl_sum_get_group_var( resp, 1, "G_2", "GGORH" ), 1e-5 );
 }
 
 BOOST_AUTO_TEST_CASE(completion_kewords) {
     setup cfg( "test_Summary_completion" );
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -437,7 +470,15 @@ BOOST_AUTO_TEST_CASE(completion_kewords) {
     BOOST_CHECK_CLOSE( 100.3,     ecl_sum_get_well_completion_var( resp, 1, "W_1", "CNPT", 1 ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 100.0, ecl_sum_get_well_completion_var( resp, 2, "W_1", "CWPT", 1 ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 100.1, ecl_sum_get_well_completion_var( resp, 2, "W_1", "COPT", 1 ), 1e-5 );
+
     BOOST_CHECK_CLOSE( 2 * 100.2, ecl_sum_get_well_completion_var( resp, 2, "W_1", "CGPT", 1 ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * 200.2, ecl_sum_get_well_completion_var( resp, 2, "W_2", "CGPT", 2 ), 1e-5 );
+    BOOST_CHECK_CLOSE( 0        , ecl_sum_get_well_completion_var( resp, 2, "W_3", "CGPT", 3 ), 1e-5 );
+
+    BOOST_CHECK_CLOSE( 1 * 100.2, ecl_sum_get_well_completion_var( resp, 1, "W_1", "CGPT", 1 ), 1e-5 );
+    BOOST_CHECK_CLOSE( 1 * 200.2, ecl_sum_get_well_completion_var( resp, 1, "W_2", "CGPT", 2 ), 1e-5 );
+    BOOST_CHECK_CLOSE( 0        , ecl_sum_get_well_completion_var( resp, 1, "W_3", "CGPT", 3 ), 1e-5 );
+
     BOOST_CHECK_CLOSE( 2 * 100.3, ecl_sum_get_well_completion_var( resp, 2, "W_1", "CNPT", 1 ), 1e-5 );
 
     /* Injection rates */
@@ -455,20 +496,16 @@ BOOST_AUTO_TEST_CASE(completion_kewords) {
     /* Solvent flow rate + or - Note OPM uses negative values for producers, while CNFR outputs positive
     values for producers*/
     BOOST_CHECK_CLOSE( -300.3,     ecl_sum_get_well_completion_var( resp, 1, "W_3", "CNFR", 3 ), 1e-5 );
-    BOOST_CHECK_CLOSE( 200.3,    ecl_sum_get_well_completion_var( resp, 1, "W_2", "CNFR", 1 ), 1e-5 );
-
-    /* CGPT's wildcarding means W_2's completions should also be available */
-    BOOST_CHECK_CLOSE( 200.2,     ecl_sum_get_well_completion_var( resp, 1, "W_2", "CGPT", 1 ), 1e-5 );
-    BOOST_CHECK_CLOSE( 2 * 200.2, ecl_sum_get_well_completion_var( resp, 2, "W_2", "CGPT", 1 ), 1e-5 );
+    BOOST_CHECK_CLOSE(  200.3,    ecl_sum_get_well_completion_var( resp, 1, "W_2", "CNFR", 2 ), 1e-5 );
 }
 
 BOOST_AUTO_TEST_CASE(field_keywords) {
     setup cfg( "test_Summary_field" );
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -537,15 +574,20 @@ BOOST_AUTO_TEST_CASE(field_keywords) {
     BOOST_CHECK_CLOSE( ggor, ecl_sum_get_field_var( resp, 1, "FGOR" ), 1e-5 );
     BOOST_CHECK_CLOSE( ggor, ecl_sum_get_field_var( resp, 1, "FGORH" ), 1e-5 );
 
+    const double foip = 110.0 * 100;
+    const double fgip = 115.5 * 100;
+    BOOST_CHECK_CLOSE( foip, ecl_sum_get_field_var( resp, 1, "FOIP" ), 1e-5 );
+    BOOST_CHECK_CLOSE( fgip, ecl_sum_get_field_var( resp, 1, "FGIP" ), 1e-5 );
+
 }
 
 BOOST_AUTO_TEST_CASE(report_steps_time) {
     setup cfg( "test_Summary_report_steps_time" );
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 1, 2 *  day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 5 *  day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 10 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 2 *  day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 5 *  day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 10 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -565,9 +607,9 @@ BOOST_AUTO_TEST_CASE(skip_unknown_var) {
     setup cfg( "test_Summary_skip_unknown_var" );
 
     out::Summary writer( cfg.es, cfg.config, cfg.name );
-    writer.add_timestep( 1, 2 *  day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 1, 5 *  day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
-    writer.add_timestep( 2, 10 * day, cfg.grid, cfg.es, cfg.cells, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 2 *  day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 1, 5 *  day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+    writer.add_timestep( 2, 10 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
     writer.write();
 
     auto res = readsum( cfg.name );
@@ -585,9 +627,9 @@ BOOST_AUTO_TEST_CASE(region_vars) {
 
     {
         out::Summary writer( cfg.es, cfg.config, cfg.name );
-        writer.add_timestep( 1, 2 *  day, cfg.grid , cfg.es, cfg.cells, cfg.wells, cfg.solution);
-        writer.add_timestep( 1, 5 *  day, cfg.grid , cfg.es, cfg.cells, cfg.wells, cfg.solution);
-        writer.add_timestep( 2, 10 * day, cfg.grid , cfg.es, cfg.cells, cfg.wells, cfg.solution);
+        writer.add_timestep( 1, 2 *  day, cfg.grid , cfg.es, cfg.regionCache, cfg.wells, cfg.solution);
+        writer.add_timestep( 1, 5 *  day, cfg.grid , cfg.es, cfg.regionCache, cfg.wells, cfg.solution);
+        writer.add_timestep( 2, 10 * day, cfg.grid , cfg.es, cfg.regionCache, cfg.wells, cfg.solution);
         writer.write();
     }
 
@@ -600,7 +642,49 @@ BOOST_AUTO_TEST_CASE(region_vars) {
     UnitSystem units( UnitSystem::UnitType::UNIT_TYPE_METRIC );
 
     for (size_t r=1; r <= 10; r++) {
-        std::string key = "RPR:" + std::to_string( r );
-        BOOST_CHECK_CLOSE( r * 1.0 , units.to_si( UnitSystem::measure::pressure , ecl_sum_get_general_var( resp, 1, key.c_str())) , 1e-5);
+        std::string rpr_key   = "RPR:"   + std::to_string( r );
+        std::string roip_key  = "ROIP:"  + std::to_string( r );
+        std::string rgip_key  = "RGIP:"  + std::to_string( r );
+        std::string roipl_key = "ROIPL:" + std::to_string( r );
+        std::string roipg_key = "ROIPG:" + std::to_string( r );
+        const double area = cfg.grid.getNX() * cfg.grid.getNY();
+
+        BOOST_CHECK_CLOSE(   r * 1.0        , units.to_si( UnitSystem::measure::pressure , ecl_sum_get_general_var( resp, 1, rpr_key.c_str())) , 1e-5);
+
+        BOOST_CHECK_CLOSE( area *  2*r * 1.0       , units.to_si( UnitSystem::measure::volume   , ecl_sum_get_general_var( resp, 1, roip_key.c_str())) , 1e-5);
+        BOOST_CHECK_CLOSE( area * (2*r - 1) * 1.0  , units.to_si( UnitSystem::measure::volume   , ecl_sum_get_general_var( resp, 1, roipl_key.c_str())) , 1e-5);
+        BOOST_CHECK_CLOSE( area * (2*r + 1 ) * 1.0 , units.to_si( UnitSystem::measure::volume   , ecl_sum_get_general_var( resp, 1, roipg_key.c_str())) , 1e-5);
+        BOOST_CHECK_CLOSE( area *  2.1*r * 1.0     , units.to_si( UnitSystem::measure::volume   , ecl_sum_get_general_var( resp, 1, rgip_key.c_str())) , 1e-5);
     }
 }
+
+
+BOOST_AUTO_TEST_CASE(region_production) {
+    setup cfg( "region_production" );
+
+    {
+        out::Summary writer( cfg.es, cfg.config, cfg.name );
+        writer.add_timestep( 0, 0 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+        writer.add_timestep( 1, 1 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+        writer.add_timestep( 2, 2 * day, cfg.grid, cfg.es, cfg.regionCache, cfg.wells , cfg.solution);
+        writer.write();
+    }
+
+    auto res = readsum( cfg.name );
+    const auto* resp = res.get();
+
+    BOOST_CHECK( ecl_sum_has_general_var( resp , "ROPR:1"));
+    BOOST_CHECK_CLOSE(ecl_sum_get_general_var( resp , 1 , "ROPR:1" ) ,
+                      ecl_sum_get_general_var( resp , 1 , "COPR:W_1:1") +
+                      ecl_sum_get_general_var( resp , 1 , "COPR:W_2:2") +
+                      ecl_sum_get_general_var( resp , 1 , "COPR:W_3:3"), 1e-5);
+
+
+
+    BOOST_CHECK( ecl_sum_has_general_var( resp , "RGPT:1"));
+    BOOST_CHECK_CLOSE(ecl_sum_get_general_var( resp , 2 , "RGPT:1" ) ,
+                      ecl_sum_get_general_var( resp , 2 , "CGPT:W_1:1") +
+                      ecl_sum_get_general_var( resp , 2 , "CGPT:W_2:2") +
+                      ecl_sum_get_general_var( resp , 2 , "CGPT:W_3:3"), 1e-5);
+}
+
