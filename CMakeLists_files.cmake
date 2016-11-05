@@ -28,7 +28,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
         opm/output/eclipse/EclipseReader.hpp
-        opm/output/eclipse/EclipseUnits.hpp
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/Tables.hpp        
