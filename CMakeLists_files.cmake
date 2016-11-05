@@ -10,7 +10,6 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseWriter.cpp
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/Tables.cpp
-        opm/output/eclipse/writeECLData.cpp
         opm/output/eclipse/RegionCache.cpp
         opm/output/vtk/writeVtkData.cpp
         opm/output/data/Solution.cpp
@@ -33,7 +32,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/Tables.hpp        
-        opm/output/eclipse/writeECLData.hpp
         opm/output/eclipse/RegionCache.hpp
         opm/output/data/Solution.hpp
         opm/output/vtk/writeVtkData.hpp
