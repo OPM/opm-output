@@ -9,6 +9,7 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseReader.cpp
         opm/output/eclipse/EclipseWriter.cpp
         opm/output/eclipse/Summary.cpp
+        opm/output/eclipse/Tables.cpp
         opm/output/eclipse/writeECLData.cpp
         opm/output/eclipse/RegionCache.cpp
         opm/output/vtk/writeVtkData.cpp
@@ -31,6 +32,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseUnits.hpp
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
+        opm/output/eclipse/Tables.hpp        
         opm/output/eclipse/writeECLData.hpp
         opm/output/eclipse/RegionCache.hpp
         opm/output/data/Solution.hpp
@@ -59,6 +61,7 @@ list (APPEND TEST_SOURCE_FILES
         tests/test_Restart.cpp
         tests/test_RFT.cpp
         tests/test_Summary.cpp
+        tests/test_Tables.cpp
         tests/test_Wells.cpp
         tests/test_writenumwells.cpp
         tests/test_Solution.cpp
@@ -72,4 +75,5 @@ list (APPEND TEST_DATA_FILES
         tests/summary_deck.DATA
         tests/testBlackoilState3.DATA
         tests/testRFT.DATA
+        tests/table_deck.DATA
     )
