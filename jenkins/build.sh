@@ -20,9 +20,9 @@ declare -a downstreams
 downstreams=(opm-material
              opm-core
              opm-grid
+             ewoms
              opm-simulators
-             opm-upscaling
-             ewoms)
+             opm-upscaling)
 
 declare -A downstreamRev
 downstreamRev[opm-material]=master
