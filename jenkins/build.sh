@@ -18,8 +18,8 @@ fi
 # Downstream revisions
 declare -a downstreams
 downstreams=(opm-material
-             opm-core
              opm-grid
+             opm-core
              ewoms
              opm-simulators
              opm-upscaling)
