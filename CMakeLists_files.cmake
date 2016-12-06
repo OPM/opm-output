@@ -10,7 +10,6 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/EclipseWriter.cpp
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/Tables.cpp
-        opm/output/eclipse/writeECLData.cpp
         opm/output/eclipse/RegionCache.cpp
         opm/output/data/Solution.cpp
         opm/test_util/EclFilesComparator.cpp
@@ -28,11 +27,9 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
         opm/output/eclipse/EclipseReader.hpp
-        opm/output/eclipse/EclipseUnits.hpp
         opm/output/eclipse/EclipseWriter.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/Tables.hpp        
-        opm/output/eclipse/writeECLData.hpp
         opm/output/eclipse/RegionCache.hpp
         opm/output/data/Solution.hpp
         opm/test_util/EclFilesComparator.hpp
