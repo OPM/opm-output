@@ -12,7 +12,6 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/Tables.cpp
         opm/output/eclipse/writeECLData.cpp
         opm/output/eclipse/RegionCache.cpp
-        opm/output/vtk/writeVtkData.cpp
         opm/output/data/Solution.cpp
         opm/test_util/EclFilesComparator.cpp
         opm/test_util/summaryRegressionTest.cpp
@@ -36,7 +35,6 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/writeECLData.hpp
         opm/output/eclipse/RegionCache.hpp
         opm/output/data/Solution.hpp
-        opm/output/vtk/writeVtkData.hpp
         opm/test_util/EclFilesComparator.hpp
         opm/test_util/summaryRegressionTest.hpp
         opm/test_util/summaryComparator.hpp
