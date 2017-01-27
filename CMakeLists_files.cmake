@@ -6,8 +6,8 @@ list( APPEND MAIN_SOURCE_FILES
         opm/test_util/summaryRegressionTest.cpp
         opm/test_util/summaryComparator.cpp
         opm/output/eclipse/EclipseGridInspector.cpp
-        opm/output/eclipse/EclipseReader.cpp
-        opm/output/eclipse/EclipseWriter.cpp
+        opm/output/eclipse/EclipseIO.cpp
+        opm/output/eclipse/RestartIO.cpp
         opm/output/eclipse/Summary.cpp
         opm/output/eclipse/Tables.cpp
         opm/output/eclipse/RegionCache.cpp
@@ -26,8 +26,8 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/test_util/summaryComparator.hpp
         opm/output/eclipse/EclipseGridInspector.hpp
         opm/output/eclipse/EclipseIOUtil.hpp
-        opm/output/eclipse/EclipseReader.hpp
-        opm/output/eclipse/EclipseWriter.hpp
+        opm/output/eclipse/EclipseIO.hpp
+        opm/output/eclipse/RestartIO.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/Tables.hpp        
         opm/output/eclipse/RegionCache.hpp
@@ -52,7 +52,7 @@ list (APPEND PROGRAM_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
         tests/test_compareSummary.cpp
         tests/test_EclFilesComparator.cpp
-        tests/test_EclipseWriter.cpp
+        tests/test_EclipseIO.cpp
         tests/test_Restart.cpp
         tests/test_RFT.cpp
         tests/test_Summary.cpp
