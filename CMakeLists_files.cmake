@@ -28,6 +28,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/EclipseIOUtil.hpp
         opm/output/eclipse/EclipseIO.hpp
         opm/output/eclipse/RestartIO.hpp
+        opm/output/eclipse/RestartValue.hpp
         opm/output/eclipse/Summary.hpp
         opm/output/eclipse/Tables.hpp        
         opm/output/eclipse/RegionCache.hpp
