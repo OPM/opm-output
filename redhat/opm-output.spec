@@ -2,10 +2,10 @@
 # spec file for package opm-output
 #
 
-%define tag rc4
+%define tag rc1
 
 Name:           opm-output
-Version:        2015.10
+Version:        2017.04
 Release:        0
 Summary:        Data output management module for OPM
 License:        GPL-3.0
