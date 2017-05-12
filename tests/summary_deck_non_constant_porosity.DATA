@@ -29,12 +29,11 @@ DZ
 TOPS
 100*1 /
 
--- Cell 2,1,10 is inactive
 ACTNUM
-  901*1 0 98*1 /
+  1000*1/
   
 PORO
-1000*0.2 /
+500*0.1 500*0.2/
 
 REGIONS
 

@@ -72,4 +72,5 @@ list (APPEND TEST_DATA_FILES
         tests/testBlackoilState3.DATA
         tests/testRFT.DATA
         tests/table_deck.DATA
+        tests/summary_deck_non_constant_porosity.DATA
     )
