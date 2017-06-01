@@ -5,6 +5,7 @@ list( APPEND MAIN_SOURCE_FILES
         opm/test_util/summaryIntegrationTest.cpp
         opm/test_util/summaryRegressionTest.cpp
         opm/test_util/summaryComparator.cpp
+        opm/test_util/EclFilesComparator.cpp
         opm/output/eclipse/EclipseGridInspector.cpp
         opm/output/eclipse/EclipseIO.cpp
         opm/output/eclipse/RestartIO.cpp
@@ -12,9 +13,6 @@ list( APPEND MAIN_SOURCE_FILES
         opm/output/eclipse/Tables.cpp
         opm/output/eclipse/RegionCache.cpp
         opm/output/data/Solution.cpp
-        opm/test_util/EclFilesComparator.cpp
-        opm/test_util/summaryRegressionTest.cpp
-        opm/test_util/summaryComparator.cpp
     )
 
 list (APPEND PUBLIC_HEADER_FILES
