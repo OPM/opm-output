@@ -269,13 +269,12 @@ void IntegrationTest::evaluateWellProductionVolume(){
 void IntegrationTest::checkWithSpikes(const char* keyword){
     int errorOccurrences = 0;
     size_t jvar = 0 ;
-    bool spikePrev = false;
     bool spikeCurrent = false;
     Deviation deviation;
 
     for (size_t ivar = 0; ivar < referenceVec->size(); ivar++){
         int errorOccurrencesPrev = errorOccurrences;
-        spikePrev = spikeCurrent;
+        bool spikePrev = spikeCurrent;
         getDeviation(ivar,jvar, deviation);
         errorOccurrences += checkDeviation(deviation);
         if (errorOccurrences != errorOccurrencesPrev){
@@ -306,6 +305,7 @@ IntegrationTest::getSpecificWellVolume(const std::vector<double>& timeVec1,
 }
 
 
+#if 0
 bool IntegrationTest::checkUnits(const char * keyword){
     const smspec_node_type * node1 = ecl_sum_get_general_var_node (ecl_sum_fileShort ,keyword);
     const smspec_node_type * node2 = ecl_sum_get_general_var_node (ecl_sum_fileLong ,keyword);
@@ -314,18 +314,18 @@ bool IntegrationTest::checkUnits(const char * keyword){
     }
     return false;
 }
+#endif
 
 
 double IntegrationTest::integrate(const std::vector<double>& timeVec,
                                   const std::vector<double>& dataVec){
     double totalSum = 0;
-    double width, height;
     if(timeVec.size() != dataVec.size()){
         OPM_THROW(std::runtime_error, "The size of the time vector does not match the size of the data vector.");
     }
     for(size_t i = 0; i < timeVec.size()-1; i++){
-        width = timeVec[i+1] - timeVec[i];
-        height = dataVec[i+1];
+        double width = timeVec[i+1] - timeVec[i];
+        double height = dataVec[i+1];
         totalSum += getRectangleArea(height, width);
     }
     return totalSum;
