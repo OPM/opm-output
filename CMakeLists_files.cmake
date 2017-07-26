@@ -67,6 +67,7 @@ list (APPEND TEST_SOURCE_FILES
 list (APPEND TEST_DATA_FILES
         tests/FIRST_SIM.DATA
         tests/summary_deck.DATA
+        tests/group_group.DATA
         tests/testBlackoilState3.DATA
         tests/testRFT.DATA
         tests/table_deck.DATA
