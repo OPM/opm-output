@@ -14,6 +14,9 @@
 #                                                                         #
 ###########################################################################
 
+# Mandatory call to project
+project(opm-output CXX)
+
 cmake_minimum_required(VERSION 2.6)
 
 set(OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
