@@ -17,7 +17,7 @@
 # Mandatory call to project
 project(opm-output CXX)
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(BUILD_TESTING "Build test applications by default?" ON)
