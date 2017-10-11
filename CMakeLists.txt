@@ -67,11 +67,13 @@ include ( ${project}-prereqs )
 include (CMakeLists_files.cmake)
 
 # We need to define this variable in the installed cmake config file.
-set(OPM_PROJECT_EXTRA_CODE_INSTALLED  "set(COMPARE_SUMMARY_COMMAND ${CMAKE_INSTALL_PREFIX}/bin${${name}_VER_DIR}/compareSummary)
-                                       set(COMPARE_ECL_COMMAND ${CMAKE_INSTALL_PREFIX}/bin${${name}_VER_DIR}/compareECL)")
+set(OPM_PROJECT_EXTRA_CODE_INSTALLED
+	"set(COMPARE_SUMMARY_COMMAND ${CMAKE_INSTALL_PREFIX}/bin${${name}_VER_DIR}/compareSummary)
+set(COMPARE_ECL_COMMAND ${CMAKE_INSTALL_PREFIX}/bin${${name}_VER_DIR}/compareECL)")
 
-set(OPM_PROJECT_EXTRA_CODE_INTREE  "set(COMPARE_SUMMARY_COMMAND ${CMAKE_BINARY_DIR}/bin/compareSummary)
-                                    set(COMPARE_ECL_COMMAND ${CMAKE_BINARY_DIR}/bin/compareECL)")
+set(OPM_PROJECT_EXTRA_CODE_INTREE
+  "set(COMPARE_SUMMARY_COMMAND ${CMAKE_BINARY_DIR}/bin/compareSummary)
+set(COMPARE_ECL_COMMAND ${CMAKE_BINARY_DIR}/bin/compareECL)")
 
 
 macro (config_hook)
