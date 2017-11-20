@@ -339,6 +339,12 @@ WLPT
 WLPTH
 /
 
+WGPRS
+/
+
+WGPRF
+/
+
 -- Injection Rates
 WWIR
  W_3
@@ -386,6 +392,14 @@ WGPT
 WGPTH
 /
 WNPT
+/
+WGPTF
+/
+WGPTS
+/
+WOPTF
+/
+WOPTS
 /
 
 -- Tracers
