@@ -15,7 +15,7 @@
 ###########################################################################
 
 # Mandatory call to project
-project(opm-output CXX)
+project(opm-output C CXX)
 
 cmake_minimum_required(VERSION 2.8)
 
@@ -49,7 +49,6 @@ if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
 endif()
 
 find_package(opm-common REQUIRED)
-message("opm-common_CONFIG=${opm-common_CONFIG}")
 include(OpmInit)
 
 # not the same location as most of the other projects; this hook overrides
