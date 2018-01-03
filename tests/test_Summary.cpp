@@ -138,6 +138,9 @@ static data::Wells result_wells() {
     rates1.set( rt::solvent, -10.3 / day );
     rates1.set( rt::dissolved_gas, -10.4 / day );
     rates1.set( rt::vaporized_oil, -10.5 / day );
+    rates1.set( rt::reservoir_water, -10.6 / day );
+    rates1.set( rt::reservoir_oil, -10.7 / day );
+    rates1.set( rt::reservoir_gas, -10.8 / day );
 
     data::Rates rates2;
     rates2.set( rt::wat, -20.0 / day );
@@ -146,6 +149,9 @@ static data::Wells result_wells() {
     rates2.set( rt::solvent, -20.3 / day );
     rates2.set( rt::dissolved_gas, -20.4 / day );
     rates2.set( rt::vaporized_oil, -20.5 / day );
+    rates2.set( rt::reservoir_water, -20.6 / day );
+    rates2.set( rt::reservoir_oil, -20.7 / day );
+    rates2.set( rt::reservoir_gas, -20.8 / day );
 
     data::Rates rates3;
     rates3.set( rt::wat, 30.0 / day );
@@ -154,6 +160,9 @@ static data::Wells result_wells() {
     rates3.set( rt::solvent, 30.3 / day );
     rates3.set( rt::dissolved_gas, 30.4 / day );
     rates3.set( rt::vaporized_oil, 30.5 / day );
+    rates3.set( rt::reservoir_water, 30.6 / day );
+    rates3.set( rt::reservoir_oil, 30.7 / day );
+    rates3.set( rt::reservoir_gas, 30.8 / day );
 
 
     /* completion rates */
@@ -164,6 +173,9 @@ static data::Wells result_wells() {
     crates1.set( rt::solvent, -100.3 / day );
     crates1.set( rt::dissolved_gas, -100.4 / day );
     crates1.set( rt::vaporized_oil, -100.5 / day );
+    crates1.set( rt::reservoir_water, -100.6 / day );
+    crates1.set( rt::reservoir_oil, -100.7 / day );
+    crates1.set( rt::reservoir_gas, -100.8 / day );
 
     data::Rates crates2;
     crates2.set( rt::wat, -200.0 / day );
@@ -172,6 +184,9 @@ static data::Wells result_wells() {
     crates2.set( rt::solvent, -200.3 / day );
     crates2.set( rt::dissolved_gas, -200.4 / day );
     crates2.set( rt::vaporized_oil, -200.5 / day );
+    crates2.set( rt::reservoir_water, -200.6 / day );
+    crates2.set( rt::reservoir_oil, -200.7 / day );
+    crates2.set( rt::reservoir_gas, -200.8 / day );
 
     data::Rates crates3;
     crates3.set( rt::wat, 300.0 / day );
@@ -180,6 +195,9 @@ static data::Wells result_wells() {
     crates3.set( rt::solvent, 300.3 / day );
     crates3.set( rt::dissolved_gas, 300.4 / day );
     crates3.set( rt::vaporized_oil, 300.5 / day );
+    crates2.set( rt::reservoir_water, 300.6 / day );
+    crates2.set( rt::reservoir_oil, 300.7 / day );
+    crates2.set( rt::reservoir_gas, 300.8 / day );
 
     /*
       The active index assigned to the completion must be manually
@@ -437,6 +455,8 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     BOOST_CHECK_CLOSE( 10.5 + 20.5, ecl_sum_get_group_var( resp, 1, "G_1", "GOPRS" ), 1e-5 );
     BOOST_CHECK_CLOSE((10.1 - 10.5) + (20.1 - 20.5),
                                     ecl_sum_get_group_var( resp, 1, "G_1", "GOPRF" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8,
+                                    ecl_sum_get_group_var( resp, 1, "G_1", "GVPR" ), 1e-5 );
 
     /* Production totals */
     BOOST_CHECK_CLOSE( 10.0 + 20.0, ecl_sum_get_group_var( resp, 1, "G_1", "GWPT" ), 1e-5 );
@@ -447,6 +467,8 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     BOOST_CHECK_CLOSE( 10.5 + 20.5, ecl_sum_get_group_var( resp, 1, "G_1", "GOPTS" ), 1e-5 );
     BOOST_CHECK_CLOSE( (10.1 - 10.5) + (20.1 - 20.5), ecl_sum_get_group_var( resp, 1, "G_1", "GOPTF" ), 1e-5 );
     BOOST_CHECK_CLOSE( (10.2 - 10.4) + (20.2 - 20.4), ecl_sum_get_group_var( resp, 1, "G_1", "GGPTF" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8,
+                                    ecl_sum_get_group_var( resp, 1, "G_1", "GVPT" ), 1e-5 );
     BOOST_CHECK_CLOSE(  2 * (10.0 + 20.0), ecl_sum_get_group_var( resp, 2, "G_1", "GWPT" ), 1e-5 );
     BOOST_CHECK_CLOSE(  2 * (10.1 + 20.1), ecl_sum_get_group_var( resp, 2, "G_1", "GOPT" ), 1e-5 );
     BOOST_CHECK_CLOSE(  2 * (10.2 + 20.2), ecl_sum_get_group_var( resp, 2, "G_1", "GGPT" ), 1e-5 );
@@ -455,6 +477,8 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     BOOST_CHECK_CLOSE(  2 * (10.5 + 20.5), ecl_sum_get_group_var( resp, 2, "G_1", "GOPTS" ), 1e-5 );
     BOOST_CHECK_CLOSE(  2 * ((10.2 - 10.4) + (20.2 - 20.4)), ecl_sum_get_group_var( resp, 2, "G_1", "GGPTF" ), 1e-5 );
     BOOST_CHECK_CLOSE(  2 * ((10.1 - 10.5) + (20.1 - 20.5)), ecl_sum_get_group_var( resp, 2, "G_1", "GOPTF" ), 1e-5 );
+    BOOST_CHECK_CLOSE(  2 * (10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8),
+                                    ecl_sum_get_group_var( resp, 2, "G_1", "GVPT" ), 1e-5 );
 
     /* Production rates (history) */
     BOOST_CHECK_CLOSE( 10.0 + 20.0, ecl_sum_get_group_var( resp, 1, "G_1", "GWPRH" ), 1e-5 );
@@ -473,6 +497,9 @@ BOOST_AUTO_TEST_CASE(group_keywords) {
     BOOST_CHECK_CLOSE( (10.0 + 20.0 + 10.1 + 20.1),
                                       ecl_sum_get_group_var( resp, 1, "G_1", "GLPTH" ), 1e-5 );
     BOOST_CHECK_CLOSE( 0,             ecl_sum_get_group_var( resp, 1, "G_2", "GLPTH" ), 1e-5 );
+
+    /* Production targets */
+    BOOST_CHECK_CLOSE( 30.1 , ecl_sum_get_group_var( resp, 1, "G_3", "GVPRT" ), 1e-5 );
 
     /* Injection rates */
     BOOST_CHECK_CLOSE( 30.0, ecl_sum_get_group_var( resp, 1, "G_2", "GWIR" ), 1e-5 );
