@@ -676,6 +676,12 @@ BOOST_AUTO_TEST_CASE(field_keywords) {
     BOOST_CHECK_CLOSE( 10.2 + 20.2, ecl_sum_get_field_var( resp, 1, "FGPR" ), 1e-5 );
     BOOST_CHECK_CLOSE( 10.0 + 20.0 + 10.1 + 20.1,
                                     ecl_sum_get_field_var( resp, 1, "FLPR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8,
+                                    ecl_sum_get_field_var( resp, 1, "FVPR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.4 + 20.4,
+                                    ecl_sum_get_field_var( resp, 1, "FGPRS" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.2 - 10.4 + 20.2 - 20.4,
+                                    ecl_sum_get_field_var( resp, 1, "FGPRF" ), 1e-5 );
 
     /* Production totals */
     BOOST_CHECK_CLOSE( 10.0 + 20.0, ecl_sum_get_field_var( resp, 1, "FWPT" ), 1e-5 );
@@ -683,11 +689,24 @@ BOOST_AUTO_TEST_CASE(field_keywords) {
     BOOST_CHECK_CLOSE( 10.2 + 20.2, ecl_sum_get_field_var( resp, 1, "FGPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 10.0 + 20.0 + 10.1 + 20.1,
                                     ecl_sum_get_field_var( resp, 1, "FLPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8,
+                                    ecl_sum_get_field_var( resp, 1, "FVPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.4 + 20.4,
+                                    ecl_sum_get_field_var( resp, 1, "FGPTS" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 10.2 - 10.4 + 20.2 - 20.4,
+                                    ecl_sum_get_field_var( resp, 1, "FGPTF" ), 1e-5 );
+
     BOOST_CHECK_CLOSE( 2 * (10.0 + 20.0), ecl_sum_get_field_var( resp, 2, "FWPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * (10.1 + 20.1), ecl_sum_get_field_var( resp, 2, "FOPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * (10.2 + 20.2), ecl_sum_get_field_var( resp, 2, "FGPT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * (10.0 + 20.0 + 10.1 + 20.1),
                                     ecl_sum_get_field_var( resp, 2, "FLPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (10.6 + 10.7 + 10.8 + 20.6 + 20.7 + 20.8),
+                                    ecl_sum_get_field_var( resp, 2, "FVPT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (10.4 + 20.4),
+                                    ecl_sum_get_field_var( resp, 2, "FGPTS" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (10.2 - 10.4 + 20.2 - 20.4),
+                                    ecl_sum_get_field_var( resp, 2, "FGPTF" ), 1e-5 );
 
     /* Production rates (history) */
     BOOST_CHECK_CLOSE( 10.0 + 20.0, ecl_sum_get_field_var( resp, 1, "FWPRH" ), 1e-5 );
@@ -712,12 +731,16 @@ BOOST_AUTO_TEST_CASE(field_keywords) {
     /* Injection rates */
     BOOST_CHECK_CLOSE( 30.0, ecl_sum_get_field_var( resp, 1, "FWIR" ), 1e-5 );
     BOOST_CHECK_CLOSE( 30.2, ecl_sum_get_field_var( resp, 1, "FGIR" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.6 + 30.7 + 30.8, ecl_sum_get_field_var( resp, 1, "FVIR" ), 1e-5 );
 
     /* Injection totals */
     BOOST_CHECK_CLOSE( 30.0,     ecl_sum_get_field_var( resp, 1, "FWIT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 30.2,     ecl_sum_get_field_var( resp, 1, "FGIT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 30.6 + 30.7 + 30.8, ecl_sum_get_field_var( resp, 1, "FVIT" ), 1e-5 );
+
     BOOST_CHECK_CLOSE( 2 * 30.0, ecl_sum_get_field_var( resp, 2, "FWIT" ), 1e-5 );
     BOOST_CHECK_CLOSE( 2 * 30.2, ecl_sum_get_field_var( resp, 2, "FGIT" ), 1e-5 );
+    BOOST_CHECK_CLOSE( 2 * (30.6 + 30.7 + 30.8), ecl_sum_get_field_var( resp, 2, "FVIT" ), 1e-5 );
 
     /* Injection totals (history) */
     BOOST_CHECK_CLOSE( 30.0, ecl_sum_get_field_var( resp, 1, "FWITH" ), 1e-5 );
@@ -812,7 +835,7 @@ BOOST_AUTO_TEST_CASE(skip_unknown_var) {
 
     /* verify that some non-supported keywords aren't written to the file */
     BOOST_CHECK( !ecl_sum_has_well_var( resp, "W_1", "WPI" ) );
-    BOOST_CHECK( !ecl_sum_has_field_var( resp, "FVIR" ) );
+    BOOST_CHECK( !ecl_sum_has_field_var( resp, "FGST" ) );
 }
 
 
