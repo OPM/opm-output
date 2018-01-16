@@ -1,4 +1,4 @@
-# Open Porous Media Output Library [![Build Status](https://travis-ci.org/OPM/opm-output.svg?branch=master)](https://travis-ci.org/OPM/opm-output)
+# Open Porous Media Output Library
 
 These are release notes for opm-output.
 
