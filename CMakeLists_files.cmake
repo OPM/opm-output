@@ -30,7 +30,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/output/eclipse/RestartIO.hpp
         opm/output/eclipse/RestartValue.hpp
         opm/output/eclipse/Summary.hpp
-        opm/output/eclipse/Tables.hpp        
+        opm/output/eclipse/Tables.hpp
         opm/output/eclipse/RegionCache.hpp
         opm/output/data/Solution.hpp
         opm/test_util/EclFilesComparator.hpp
@@ -75,4 +75,5 @@ list (APPEND TEST_DATA_FILES
         tests/testrft.DATA
         tests/table_deck.DATA
         tests/summary_deck_non_constant_porosity.DATA
+        tests/SUMMARY_EFF_FAC.DATA
     )
