@@ -30,8 +30,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
 #include <opm/output/data/Wells.hpp>
-#include <opm/output/data/Cells.hpp>
-#include <opm/output/data/Solution.hpp>
 #include <opm/output/eclipse/RegionCache.hpp>
 
 namespace Opm {
@@ -50,15 +48,15 @@ class Summary {
         Summary( const EclipseState&, const SummaryConfig&, const EclipseGrid&, const Schedule&, const std::string& );
         Summary( const EclipseState&, const SummaryConfig&, const EclipseGrid&, const Schedule&, const char* basename );
 
-        void add_timestep( int report_step,
+        void add_timestep(int report_step,
                            double secs_elapsed,
                            const EclipseState& es,
                            const Schedule& schedule,
                            const data::Wells&,
-                           const data::Solution&,
-                           const std::map<std::string, double>& misc_values);
+                           const std::map<std::string, double>& single_values,
+                           const std::map<std::string, std::vector<double>>& region_values = {},
+                           const std::map<std::pair<std::string, int>, double>& block_values = {});
 
-        void set_initial( const data::Solution& );
         void write();
 
         ~Summary();
@@ -72,8 +70,6 @@ class Summary {
         std::unique_ptr< keyword_handlers > handlers;
         const ecl_sum_tstep_type* prev_tstep = nullptr;
         double prev_time_elapsed = 0;
-        double initial_oip = 0.0;
-        const std::vector<double> porv;
 };
 
 }

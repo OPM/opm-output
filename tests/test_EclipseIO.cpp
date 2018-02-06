@@ -342,6 +342,8 @@ BOOST_AUTO_TEST_CASE(EclipseIOIntegration) {
 				     first_step - start_time,
 				     sol,
 				     wells,
+                     {},
+                     {},
 				     {});
 				     
 
