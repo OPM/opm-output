@@ -71,8 +71,8 @@ list (APPEND TEST_DATA_FILES
         tests/FIRST_SIM.DATA
         tests/summary_deck.DATA
         tests/group_group.DATA
-        tests/testBlackoilState3.DATA
-        tests/testRFT.DATA
+        tests/testblackoilstate3.DATA
+        tests/testrft.DATA
         tests/table_deck.DATA
         tests/summary_deck_non_constant_porosity.DATA
     )
