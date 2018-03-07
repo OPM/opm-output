@@ -1,5 +1,8 @@
 # Open Porous Media Output Library
 
+THIS MODULE IS DEPRECATED.
+The code is now integrated in the opm-common module.
+
 These are release notes for opm-output.
 
 
